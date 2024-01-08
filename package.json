@@ -1,0 +1,13 @@
+{
+  "name": "Restuner",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/rishit-singh/Restuner",
+  "author": "rishit-singh <rsrishitsingh@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "type": "module"
+}
