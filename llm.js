@@ -1,6 +1,6 @@
-import { Bot } from "./modules/bot.js";
+import { ReplicateBot } from "./modules/bot.js";
 
-const bot = new Bot(process.env.MODEL, process.env.ACCOUNTID, process.env.MISTRALKEY);
+const bot = new ReplicateBot(process.env.REPLICATE_VERSION, "mistralai/mixtral-8x7b-instruct-v0.1", process.env.MISTRALKEY);
 
 // (await (bot.Prompt("I'll ask you to generate code, reply with code only and nothing else.", true)
 //             .Prompt(process.argv[2])
@@ -10,19 +10,11 @@ const bot = new Bot(process.env.MODEL, process.env.ACCOUNTID, process.env.MISTRA
 //                 console.log(val.content);
 //             });
 
-
-const parse = (data) => {
-    if (data.length > 0) 
-        try{
-            return JSON.parse(data.substring(data.search(":") + 1, data.length));
-        }
-        catch (e)
-        {
-        }
-    return null;
-}
-
-(await bot.PromptStream("write me a lexer in c++"))
-    .split("\n").map(data => parse(data)).filter(resp => resp != null).forEach(e => {
-    process.stdout.write(e.response);
-});
+console.log((await bot.Prompt("user", "hello mixtral")
+    .Run()));
+    
+    
+    // .map(token => token.toString()).forEach(token => {
+    //     console.log(token);
+    //     // process.stdout.write(token.substring(0, token.length - 2));
+    // });

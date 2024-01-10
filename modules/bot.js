@@ -1,16 +1,31 @@
 import fetch from "node-fetch";
 
-export class Bot
-{   
-    constructor(model, accountID, apiKey)
+export class Message
+{
+    constructor(role, content)
     {
+        this.Role = role;
+        this.Content = content;
+    }
+
+    toString() 
+    {
+        return (this.Role == "user") ? `[INST] ${this.Content} [/INST]` : this.Content;
+    }
+}
+ 
+export class ReplicateBot
+{   
+    constructor(version, model, apiKey)
+    {
+        this.Version = version;
         this.Model = model;
-        this.AccountID = accountID;
         this.ApiKey = apiKey;
 
-        this.Messages = [];
+        this.PromptString = "";
 
-        this.MessageQueue = [];
+        this.Messages = [];
+    
         this.Results = []; 
     }
 
@@ -18,57 +33,83 @@ export class Bot
     {
         return this.Messages;
     }
-  
-    async Run()
+
+    GeneratePromptString()
     {
-        while (this.MessageQueue.length > 0)
-        {
-            this.Messages.push(this.MessageQueue.shift());
-
-            try
-            {   
-                let response = (await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.AccountID}/ai/run/${this.Model}`,
-                                { 
-                                    method: "POST",
-                                    headers: { Authorization: `Bearer ${this.ApiKey}`},
-                                    body: JSON.stringify({ messages: this.Messages }) 
-                                }
-                            )).json());
-
-                           
-                if (response.result.response !== undefined)
-                    this.Messages.push({
-                        role: "assistant",
-                        content: response.result.response 
-                    });
-                else
-                    console.log(`Messed up response: ${JSON.stringify(response)}`); 
-            }
-            catch (e) 
-            {
-                console.error(e);
-            }
-        }
-
-        return this.Messages;
+        this.PromptString = this.Messages.map(message => message.toString()).join("\n"); 
     }
 
-    async PromptStream(prompt)
+    async PollResult(url, delay = 1000)
     {
-        let response = (await (await fetch(`https://api.cloudflare.com/client/v4/accounts/${this.AccountID}/ai/run/${this.Model}`,
-            {
-                method: "POST",
-                headers: { Authorization: `Bearer ${this.ApiKey}` },
-                body: JSON.stringify({ prompt: prompt, stream: true })
-            }
-        ))).text();
+        let output = null;
 
-        return response;
+        while (output == null)
+        {
+            let response = await ((await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Token ${this.ApiKey}` }
+            })).json());
+
+            let fetched = 0;
+
+            if (response.output !== undefined)
+            {
+                let outputSpread = [...response.output];
+
+                while (outputSpread.length != fetched)
+                {
+                    output = outputSpread;
+
+                    fetched = output.length;
+                    
+                    response = await ((await fetch(url, {
+                        method: "GET",
+                        headers: { Authorization: `Token ${this.ApiKey}` }
+                    })).json());
+
+                    outputSpread = [...response.output];
+                }
+            }
+        }
+        
+        return output;
+    }
+
+    async Run()
+    {
+        this.GeneratePromptString();
+
+        try
+        {   
+            let response = (await (await fetch(`https://api.replicate.com/v1/models/${this.Model}/predictions`,
+                            { 
+                                method: "POST",
+                                headers: { Authorization: `Token ${this.ApiKey}`},
+                                body: JSON.stringify({
+                                    version: this.Version,
+                                    input: {
+                                        prompt: this.PromptString
+                                    }
+                                }) 
+                            }
+                        )).json());
+
+            this.Results.push((await this.PollResult(response.urls.get))
+                        .filter(token => token !== undefined)
+                        .map(token => token.toString())
+                        .join(""));
+        }
+        catch (e) 
+        {
+            console.error(e);
+        }
+
+        return this.Results;
     }
 
     Prompt(message, stream = false)
     {
-        this.MessageQueue.push({ role: "user", content: message, stream: stream });
+        this.Messages.push(new Message("user", message));
 
         return this;
     }
