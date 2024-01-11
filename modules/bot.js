@@ -13,32 +13,24 @@ export class Message
         return (this.Role == "user") ? `[INST] ${this.Content} [/INST]` : this.Content;
     }
 }
- 
+
 export class ReplicateBot
 {   
-    constructor(version, model, apiKey)
+    constructor(version, model, apiKey, endToken = "RESPONSEEND")
     {
         this.Version = version;
         this.Model = model;
         this.ApiKey = apiKey;
-
         this.PromptString = "";
-
         this.MessageQueue = [];
-
         this.Messages = [];
-    
-        this.Results = []; 
+        this.Results = [];
+        this.EndToken = endToken; 
     }
 
     Result()
     {
-        return this.Messages;
-    }
-
-    GeneratePromptString()
-    {
-        this.PromptString = this.Messages.map(message => message.toString()).join("\n"); 
+        return this.Results;
     }
 
     async PollResult(url, maxTokens = 1000)
@@ -52,32 +44,25 @@ export class ReplicateBot
                 headers: { Authorization: `Token ${this.ApiKey}` }
             })).json());
 
-            let fetched = 0;
-
             if (response.output !== undefined)
             {
-                console.log(response.output);
                 let outputSpread = [...response.output];
 
-                for (let x = 0; !outputSpread.filter(token => token.search("END") != -1).length < 1 ; x++)
+
+                for (let x = 0; outputSpread.join("").search(this.EndToken) != -1; x++)
                 {
                     output = outputSpread;
 
-                    fetched = output.length;
-                    
                     response = await ((await fetch(url, {
-                        method: "get",
+                        method: "GET",
                         headers: { Authorization: `Token ${this.apikey}` }
                     })).json());
+                    console.log(output.join(""));
 
                     if (response.output === undefined)
                         break;
 
                     outputSpread = [...response.output];
-                    console.log(outputSpread[outputSpread - 1]);
-
-                    if ((x % 10) == 0)
-                        console.log(`${outputSpread.join("")}\nTokens: ${outputSpread.length}`);
                 }
             }
         }
@@ -87,42 +72,51 @@ export class ReplicateBot
 
     async Run()
     {
-        this.GeneratePromptString();
-
-        console.log(this.PromptString);
-
         try
-        {   
-            let response = (await (await fetch(`https://api.replicate.com/v1/models/${this.Model}/predictions`,
-                            { 
-                                method: "POST",
-                                headers: { Authorization: `Token ${this.ApiKey}`},
-                                body: JSON.stringify({
-                                    version: this.Version,
-                                    input: {
-                                        prompt: this.PromptString,
-                                        max_new_tokens: 1000
-                                    }
-                                }) 
-                            }
-                        )).json());
+        {  
+            while (this.MessageQueue.length > 0)
+            { 
+                const message = this.MessageQueue.shift();
 
-            this.Results.push((await this.PollResult(response.urls.get))
-                        .filter(token => token !== undefined)
-                        .map(token => token.toString())
-                        .join(""));
+                this.PromptString += `${message.toString().trim()}\n`;
+
+                let response = (await (await fetch(`https://api.replicate.com/v1/models/${this.Model}/predictions`,
+                                { 
+                                    method: "POST",
+                                    headers: { Authorization: `Token ${this.ApiKey}`},
+                                    body: JSON.stringify({
+                                        version: this.Version,
+                                        input: {
+                                            prompt: this.PromptString,
+                                            max_new_tokens: 1000
+                                        }
+                                    }) 
+                                }
+                            )).json());
+                            
+                this.Results.push((await this.PollResult(response.urls.get))
+                            .filter(token => token !== undefined)
+                            .map(token => token.toString())
+                            .join(""));
+
+                this.PromptString += `${this.Results[this.Results.length - 1].trim()}\n`;
+                
+                console.log(this.PromptString);
+            }
         }
         catch (e) 
         {
             console.error(e);
         }
 
-        return this.Results;
+        return this;
     }
 
     Prompt(message, stream = false)
     {
-        this.Messages.push(new Message("user", message));
+        let messageObj;
+        this.MessageQueue.push(messageObj = new Message("user", message));
+        this.Messages.push(messageObj);
 
         return this;
     }
