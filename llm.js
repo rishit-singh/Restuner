@@ -10,8 +10,8 @@ const bot = new ReplicateBot(process.env.REPLICATE_VERSION, "mistralai/mixtral-8
 //                 console.log(val.content);
 //             });
 
-console.log((await bot.Prompt("user", "hello mixtral")
-    .Run()));
+(await bot.Prompt(process.argv[2])
+    .Run()).forEach(token => process.stdout.write(token.toString()));
     
     
     // .map(token => token.toString()).forEach(token => {

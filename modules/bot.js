@@ -24,6 +24,8 @@ export class ReplicateBot
 
         this.PromptString = "";
 
+        this.MessageQueue = [];
+
         this.Messages = [];
     
         this.Results = []; 
@@ -39,7 +41,7 @@ export class ReplicateBot
         this.PromptString = this.Messages.map(message => message.toString()).join("\n"); 
     }
 
-    async PollResult(url, delay = 1000)
+    async PollResult(url, maxTokens = 1000)
     {
         let output = null;
 
@@ -54,20 +56,28 @@ export class ReplicateBot
 
             if (response.output !== undefined)
             {
+                console.log(response.output);
                 let outputSpread = [...response.output];
 
-                while (outputSpread.length != fetched)
+                for (let x = 0; !outputSpread.filter(token => token.search("END") != -1).length < 1 ; x++)
                 {
                     output = outputSpread;
 
                     fetched = output.length;
                     
                     response = await ((await fetch(url, {
-                        method: "GET",
-                        headers: { Authorization: `Token ${this.ApiKey}` }
+                        method: "get",
+                        headers: { Authorization: `Token ${this.apikey}` }
                     })).json());
 
+                    if (response.output === undefined)
+                        break;
+
                     outputSpread = [...response.output];
+                    console.log(outputSpread[outputSpread - 1]);
+
+                    if ((x % 10) == 0)
+                        console.log(`${outputSpread.join("")}\nTokens: ${outputSpread.length}`);
                 }
             }
         }
@@ -79,6 +89,8 @@ export class ReplicateBot
     {
         this.GeneratePromptString();
 
+        console.log(this.PromptString);
+
         try
         {   
             let response = (await (await fetch(`https://api.replicate.com/v1/models/${this.Model}/predictions`,
@@ -88,7 +100,8 @@ export class ReplicateBot
                                 body: JSON.stringify({
                                     version: this.Version,
                                     input: {
-                                        prompt: this.PromptString
+                                        prompt: this.PromptString,
+                                        max_new_tokens: 1000
                                     }
                                 }) 
                             }
