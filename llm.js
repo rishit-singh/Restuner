@@ -4,5 +4,5 @@ const bot = new ReplicateBot(process.env.REPLICATE_VERSION, "mistralai/mixtral-8
 
 console.log((await bot.Prompt(process.argv[2])
     .Prompt("thanks")
-    .Run()).PromptString);
+    .Run()).Result());
     

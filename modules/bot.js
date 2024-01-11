@@ -1,16 +1,11 @@
 import fetch from "node-fetch";
 
-export class Message
+function Message(role, content)
 {
-    constructor(role, content)
-    {
-        this.Role = role;
-        this.Content = content;
-    }
-
-    toString() 
-    {
-        return (this.Role == "user") ? `[INST] ${this.Content} [/INST]` : this.Content;
+    return {
+        Role: role,
+        Content: content,
+        toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
     }
 }
 
@@ -30,7 +25,7 @@ export class ReplicateBot
 
     Result()
     {
-        return this.Results;
+        return this.Results.map(result => result.substring(0, result.search(this.EndToken)));
     }
 
     async PollResult(url, maxTokens = 1000)
@@ -115,7 +110,7 @@ export class ReplicateBot
     Prompt(message, stream = false)
     {
         let messageObj;
-        this.MessageQueue.push(messageObj = new Message("user", message));
+        this.MessageQueue.push(messageObj = Message("user", message));
         this.Messages.push(messageObj);
 
         return this;
