@@ -9,50 +9,41 @@ function Message(role, content)
     }
 }
 
-export class ReplicateBot
-{   
-    constructor(version, model, apiKey, endToken = "RESPONSEEND")
-    {
-        this.Version = version;
-        this.Model = model;
-        this.ApiKey = apiKey;
-        this.PromptString = "";
-        this.MessageQueue = [];
-        this.Messages = [];
-        this.Results = [];
-        this.EndToken = endToken; 
-    }
+export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
+{  
+    const MessageQueue = [];
 
-    Result()
-    {
-        return this.Results.map(result => result.substring(0, result.search(this.EndToken)));
-    }
+    const Messages = [];
 
-    async PollResult(url, maxTokens = 1000)
-    {
+    const Results = [];
+
+    let PromptString = "";
+
+    const PollResult = async (url, maxTokens = 1000) => {
         let output = null;
 
         while (output == null)
         {
             let response = await ((await fetch(url, {
                 method: "GET",
-                headers: { Authorization: `Token ${this.ApiKey}` }
+                headers: { Authorization: `Token ${ApiKey}` }
             })).json());
 
             if (response.output !== undefined)
             {
                 let outputSpread = [...response.output];
 
-
-                for (let x = 0; outputSpread.join("").search(this.EndToken) != -1; x++)
+                for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++)
                 {
                     output = outputSpread;
 
+
+                    console.log(outputSpread.join("").search(EndToken));
+
                     response = await ((await fetch(url, {
                         method: "GET",
-                        headers: { Authorization: `Token ${this.apikey}` }
+                        headers: { Authorization: `Token ${ApiKey}` }
                     })).json());
-                    console.log(output.join(""));
 
                     if (response.output === undefined)
                         break;
@@ -64,56 +55,69 @@ export class ReplicateBot
         
         return output;
     }
+    
+    return { 
+        Version,
+        Model,
+        ApiKey,
+        PromptString,
+        MessageQueue,
+        Messages,
+        Results,
+        EndToken, 
 
-    async Run()
-    {
-        try
-        {  
-            while (this.MessageQueue.length > 0)
-            { 
-                const message = this.MessageQueue.shift();
+        Result: () => Results.map(result => result.substring(0, result.search(EndToken))),
 
-                this.PromptString += `${message.toString().trim()}\n`;
+        async Run() {
+            try
+            {  
+                while (MessageQueue.length > 0)
+                { 
+                    const message = MessageQueue.shift();
 
-                let response = (await (await fetch(`https://api.replicate.com/v1/models/${this.Model}/predictions`,
-                                { 
-                                    method: "POST",
-                                    headers: { Authorization: `Token ${this.ApiKey}`},
-                                    body: JSON.stringify({
-                                        version: this.Version,
-                                        input: {
-                                            prompt: this.PromptString,
-                                            max_new_tokens: 1000
-                                        }
-                                    }) 
-                                }
-                            )).json());
-                            
-                this.Results.push((await this.PollResult(response.urls.get))
-                            .filter(token => token !== undefined)
-                            .map(token => token.toString())
-                            .join(""));
+                    console.log(`Message queue: ${MessageQueue.length}`);
 
-                this.PromptString += `${this.Results[this.Results.length - 1].trim()}\n`;
-                
-                console.log(this.PromptString);
+                    PromptString += `${message.toString().trim()}\n`;
+
+                    let response = (await (await fetch(`https://api.replicate.com/v1/models/${Model}/predictions`,
+                                    { 
+                                        method: "POST",
+                                        headers: { Authorization: `Token ${ApiKey}`},
+                                        body: JSON.stringify({
+                                            version: Version,
+                                            input: {
+                                                prompt: PromptString,
+                                                max_new_tokens: 1000
+                                            }
+                                        }) 
+                                    }
+                                )).json());
+                                
+                    Results.push((await PollResult(response.urls.get))
+                                .filter(token => token !== undefined)
+                                .map(token => token.toString())
+                                .join(""));
+
+                    PromptString += `${Results[Results.length - 1].trim()}\n`;
+                    
+                    console.log(PromptString);
+                }
             }
+            catch (e) 
+            {
+                console.error(e);
+            }
+
+            return this;
+        },
+
+        Prompt(message, stream = false) {
+            let messageObj;
+
+            MessageQueue.push(messageObj = Message("user", message));
+            Messages.push(messageObj);
+
+            return this; 
         }
-        catch (e) 
-        {
-            console.error(e);
-        }
-
-        return this;
-    }
-
-    Prompt(message, stream = false)
-    {
-        let messageObj;
-        this.MessageQueue.push(messageObj = Message("user", message));
-        this.Messages.push(messageObj);
-
-        return this;
     }
 }
-
