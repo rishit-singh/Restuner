@@ -8,7 +8,9 @@
   "private": false,
   "dependencies": {
     "@cloudflare/ai": "^1.0.47",
-    "node-fetch": "^3.3.2"
+    "fs": "^0.0.1-security",
+    "node-fetch": "^3.3.2",
+    "pdfjs-dist": "^4.0.379"
   },
   "type": "module"
 }

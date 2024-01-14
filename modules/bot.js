@@ -36,10 +36,7 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
                 for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++)
                 {
                     output = outputSpread;
-
-
-                    console.log(outputSpread.join("").search(EndToken));
-
+                    
                     response = await ((await fetch(url, {
                         method: "GET",
                         headers: { Authorization: `Token ${ApiKey}` }
@@ -49,7 +46,12 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
                         break;
 
                     outputSpread = [...response.output];
+
+                    console.log(outputSpread);
                 }
+
+
+                console.log(outputSpread.join("")); 
             }
         }
         
@@ -86,21 +88,20 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
                                         body: JSON.stringify({
                                             version: Version,
                                             input: {
-                                                prompt: PromptString,
-                                                max_new_tokens: 1000
+                                                prompt: PromptString
                                             }
                                         }) 
                                     }
                                 )).json());
-                                
+                               
+                    console.log(response);
+
                     Results.push((await PollResult(response.urls.get))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())
                                 .join(""));
 
                     PromptString += `${Results[Results.length - 1].trim()}\n`;
-                    
-                    console.log(PromptString);
                 }
             }
             catch (e) 
@@ -113,7 +114,7 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
 
         Prompt(message, stream = false) {
             let messageObj;
-
+           
             MessageQueue.push(messageObj = Message("user", message));
             Messages.push(messageObj);
 
