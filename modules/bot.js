@@ -84,13 +84,12 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
                                         body: JSON.stringify({
                                             version: Version,
                                             input: {
-                                                prompt: PromptString,
-                                                max_new_tokens: 1024
+                                                prompt: PromptString
                                             }
                                         }) 
                                     }
                                 )).json());
-                               
+                                    
                     Results.push((await PollResult(response.urls.get))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())

@@ -8,8 +8,8 @@ export function ResumeBot(Version, Model, ApiKey, onGenerateCallback = (tokens) 
     let resumeBuffer = "";
 
     return {
-         async LoadResume(resumePath) {
-            const pdf = await getDocument(resumePath); 
+         async LoadResume(buffer) {
+            const pdf = await getDocument(buffer); 
             
             await pdf.promise
                 .then(async function (doc) {

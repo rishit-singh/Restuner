@@ -1,3 +1,4 @@
+import { readFileSync } from "fs";
 import { ReplicateBot } from "./modules/bot.js";
 import { ResumeBot } from "./modules/resumebot.js";
 
@@ -6,7 +7,7 @@ const bot = ResumeBot(process.env.REPLICATE_VERSION,
                         process.env.MISTRALKEY,
                         (tokens) => console.log([...tokens].join("")));
 
-await bot.LoadResume(process.argv[2]);
+await bot.LoadResume(readFileSync(process.argv[2]).buffer);
 await bot.Initialize(process.argv[2]);
 await bot.Tune(`Buyatab is not just about team lunches, fun company events or puppies in the office (although we have all 3!). A finTech maverick and officially one of the most popular technology companies in BC, Buyatab is a leading supplier of advanced online gift card infrastructure, technology and marketing services for leading brands. Working with some of the world’s leading brands (including Four Seasons, Fairmont, Whole Foods Market, Tim Hortons), we are recognized for our solution and design flexibility, focus on client brand standards, high-quality customer support, and fraud protection guarantee. As a result, our clients are positioned to grow their gift card business, enhance their brands, gain a competitive edge, and leverage the rapid growth in mobile device use and social media.
  
