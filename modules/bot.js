@@ -1,3 +1,4 @@
+import { writeFile } from "fs";
 import fetch from "node-fetch";
 
 function Message(role, content)
@@ -9,8 +10,8 @@ function Message(role, content)
     }
 }
 
-export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
-{  
+export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGenerateCallback = tokens => {})
+{   
     const MessageQueue = [];
 
     const Messages = [];
@@ -47,11 +48,8 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
 
                     outputSpread = [...response.output];
 
-                    console.log(outputSpread);
+                    onGenerateCallback(outputSpread);
                 }
-
-
-                console.log(outputSpread.join("")); 
             }
         }
         
@@ -70,36 +68,34 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
 
         Result: () => Results.map(result => result.substring(0, result.search(EndToken))),
 
-        async Run() {
+       async Run(model = Model) { 
             try
             {  
                 while (MessageQueue.length > 0)
                 { 
                     const message = MessageQueue.shift();
 
-                    console.log(`Message queue: ${MessageQueue.length}`);
-
                     PromptString += `${message.toString().trim()}\n`;
 
-                    let response = (await (await fetch(`https://api.replicate.com/v1/models/${Model}/predictions`,
+                    let response = (await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`,
                                     { 
                                         method: "POST",
                                         headers: { Authorization: `Token ${ApiKey}`},
                                         body: JSON.stringify({
                                             version: Version,
                                             input: {
-                                                prompt: PromptString
+                                                prompt: PromptString,
+                                                max_new_tokens: 1024
                                             }
                                         }) 
                                     }
                                 )).json());
                                
-                    console.log(response);
-
                     Results.push((await PollResult(response.urls.get))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())
                                 .join(""));
+                    
 
                     PromptString += `${Results[Results.length - 1].trim()}\n`;
                 }
@@ -119,6 +115,13 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RESPONSEEND")
             Messages.push(messageObj);
 
             return this; 
+        },
+
+        Save(path)
+        {
+            console.log(); 
+
+            writeFile(path, this.PromptString, err => err);
         }
     }
 }
