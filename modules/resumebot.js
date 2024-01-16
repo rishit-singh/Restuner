@@ -3,8 +3,10 @@ import {getDocument} from "pdfjs-dist";
 
 export function ResumeBot(Version, Model, ApiKey, onGenerateCallback = (tokens) => { })
 {
-    const Bot = ReplicateBot(Version, Model, ApiKey, "RREND", onGenerateCallback);
-    
+    const Bot = ReplicateBot(Version, Model, ApiKey);
+   
+    let OnGenerateCallback = onGenerateCallback;
+
     let resumeBuffer = "";
 
     return {
@@ -12,7 +14,7 @@ export function ResumeBot(Version, Model, ApiKey, onGenerateCallback = (tokens) 
             const pdf = await getDocument(buffer); 
             
             await pdf.promise
-                .then(async function (doc) {
+                .then(async (doc) => {
                     const numPages = doc.numPages;
           
                     let lastPromise; // will be used to chain promises
@@ -35,6 +37,18 @@ export function ResumeBot(Version, Model, ApiKey, onGenerateCallback = (tokens) 
             Model = model;
         },
 
+        get Callback()
+        {
+            return this.OnGenerateCallback;
+        },
+
+        set Callback(callback)
+        {
+            OnGenerateCallback = callback;
+
+            Bot.Callback = OnGenerateCallback;
+        },
+        
         async Tune(jobDescription)
         {
             const results = (await Bot.Prompt(`Tune this resume to match this ${jobDescription}`)

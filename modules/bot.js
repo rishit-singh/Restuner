@@ -20,42 +20,8 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
     let PromptString = "";
 
-    const PollResult = async (url, maxTokens = 1000) => {
-        let output = null;
+    let OnGenerateCallback; 
 
-        while (output == null)
-        {
-            let response = await ((await fetch(url, {
-                method: "GET",
-                headers: { Authorization: `Token ${ApiKey}` }
-            })).json());
-
-            if (response.output !== undefined)
-            {
-                let outputSpread = [...response.output];
-
-                for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++)
-                {
-                    output = outputSpread;
-                    
-                    response = await ((await fetch(url, {
-                        method: "GET",
-                        headers: { Authorization: `Token ${ApiKey}` }
-                    })).json());
-
-                    if (response.output === undefined)
-                        break;
-
-                    outputSpread = [...response.output];
-
-                    onGenerateCallback(outputSpread);
-                }
-            }
-        }
-        
-        return output;
-    }
-    
     return { 
         Version,
         Model,
@@ -68,7 +34,41 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
         Result: () => Results.map(result => result.substring(0, result.search(EndToken))),
 
-       async Run(model = Model) { 
+        async PollResult(url, maxTokens = 1000) 
+        {
+            let output = null;
+
+            while (output == null) {
+                let response = await ((await fetch(url, {
+                    method: "GET",
+                    headers: { Authorization: `Token ${ApiKey}` }
+                })).json());
+
+                if (response.output !== undefined) {
+                    let outputSpread = [...response.output];
+
+                    for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++) {
+                        output = outputSpread;
+
+                        response = await ((await fetch(url, {
+                            method: "GET",
+                            headers: { Authorization: `Token ${ApiKey}` }
+                        })).json());
+
+                        if (response.output === undefined)
+                            break;
+
+                        outputSpread = [...response.output];
+
+                        OnGenerateCallback(outputSpread);
+                    }
+                }
+            }
+
+            return output;
+        },
+
+        async Run(model = Model) { 
             try
             {  
                 while (MessageQueue.length > 0)
@@ -90,7 +90,7 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
                                     }
                                 )).json());
                                     
-                    Results.push((await PollResult(response.urls.get))
+                    Results.push((await this.PollResult(response.urls.get))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())
                                 .join(""));
@@ -121,6 +121,16 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             console.log(); 
 
             writeFile(path, this.PromptString, err => err);
+        },
+
+        get Callback()
+        {
+            return callback;
+        },
+
+        set Callback(callback)
+        {
+            OnGenerateCallback = callback;
         }
     }
 }
