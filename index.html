@@ -1,0 +1,15 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <script type="text/javascript">
+            const body = document.getElementsByTagName("body")[0];
+           
+            setInterval(() => {
+                fetch("http://localhost:3000/output", {method: "GET"})
+                    .then(r => r.text()
+                                .then(t => console.log(body.innerText = t)));
+            }, 2000);
+        </script>
+    </body>
+</html>

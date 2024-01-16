@@ -89,14 +89,16 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
                                         }) 
                                     }
                                 )).json());
-                                    
-                    Results.push((await this.PollResult(response.urls.get))
-                                .filter(token => token !== undefined)
-                                .map(token => token.toString())
-                                .join(""));
+                
+                    if (message.Role != "system")
+                    {
+                        Results.push((await this.PollResult(response.urls.get))
+                                    .filter(token => token !== undefined)
+                                    .map(token => token.toString())
+                                    .join(""));
                     
-
-                    PromptString += `${Results[Results.length - 1].trim()}\n`;
+                        PromptString += `${Results[Results.length - 1].trim()}\n`;
+                    }
                 }
             }
             catch (e) 
@@ -107,10 +109,10 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             return this;
         },
 
-        Prompt(message, stream = false) {
+        Prompt(message, role = "user", stream = false) {
             let messageObj;
            
-            MessageQueue.push(messageObj = Message("user", message));
+            MessageQueue.push(messageObj = Message(role, message));
             Messages.push(messageObj);
 
             return this; 
@@ -133,4 +135,4 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             OnGenerateCallback = callback;
         }
     }
-}
+} 
