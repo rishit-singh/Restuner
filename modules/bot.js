@@ -6,6 +6,7 @@ function Message(role, content)
     return {
         Role: role,
         Content: content,
+        
         toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
     }
 }
@@ -68,7 +69,7 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             return output;
         },
 
-        async Run(model = Model) { 
+        async Run(model = Model, stream = false) { 
             try
             {  
                 while (MessageQueue.length > 0)
@@ -85,8 +86,9 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
                                             version: Version,
                                             input: {
                                                 prompt: PromptString
-                                            }
-                                        }) 
+                                            },
+                                            stream: stream
+                                        }), 
                                     }
                                 )).json());
                 
@@ -109,7 +111,7 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             return this;
         },
 
-        Prompt(message, role = "user", stream = false) {
+        Prompt(message, role = "user") {
             let messageObj;
            
             MessageQueue.push(messageObj = Message(role, message));
@@ -120,8 +122,6 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
         Save(path)
         {
-            console.log(); 
-
             writeFile(path, this.PromptString, err => err);
         },
 
@@ -136,3 +136,4 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
         }
     }
 } 
+ 

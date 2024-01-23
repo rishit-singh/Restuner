@@ -71,6 +71,10 @@ export function ResumeBot(Version, _Model, ApiKey, onGenerateCallback = (tokens)
             return (await Bot.Prompt(prompt).Run());
         },
 
+        async PromptStream(prompt) {
+                                           
+        },
+
         async Initialize(resumePath)
         {   
             return (await Bot.Prompt("You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Respond with OK only if you understand and make sure that the last token of your every response is 'RREND'")
