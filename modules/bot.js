@@ -1,5 +1,6 @@
 import { writeFile } from "fs";
 import fetch from "node-fetch";
+import {v4 as uuidv4} from "uuid";
 
 function Message(role, content)
 {
@@ -10,6 +11,82 @@ function Message(role, content)
         toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
     }
 }
+            
+function PromptJob(model, apikey, _stream) 
+{
+    const MessageQueue = [];
+
+    return {
+        ID: uuidv4(),
+
+        Stage: "Initialize",
+
+        PromptString: "",
+
+        Result: {},
+
+        Prompt(message, stage = "Initialize")
+        {
+            this.Stage = stage;
+
+            MessageQueue.push(message);
+
+            return this;
+        },
+
+        async Run()
+        {
+            while (MessageQueue.length > 0)
+            {
+                const message = MessageQueue.shift();
+           
+                this.PromptString += `${message.toString()}\n`;
+            }
+
+            this.Result = await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, 
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Authorization": `Token ${apikey}`
+                                    },
+                                    body: JSON.stringify(
+                                        {
+                                            input: {
+                                                "prompt": message                                            
+                                            },
+                                            stream: _stream
+                                        }
+                                    )
+                                })).json(); 
+            return this.Result;
+        }
+    };
+}
+
+export function PromptJobManager()
+{   
+    const Jobs = new Map();
+    const ResultTokens = new Map();
+
+    return {
+        AddJob(job)
+        {
+            Jobs.set(job.ID, { Promise: job.Run(), Result: null });
+        },
+        
+        async RunJob(id)
+        {
+            Jobs[id].Result = await Jobs[id].Promise;
+        },
+
+        async RunAllJobs()
+        {
+            Jobs.forEach(async (value, key, map) => {
+                map[key].Result = await value;
+            });
+        }
+    };
+} 
 
 export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGenerateCallback = tokens => {})
 {   

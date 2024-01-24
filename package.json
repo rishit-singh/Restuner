@@ -13,7 +13,8 @@
     "fs": "^0.0.1-security",
     "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
-    "pdfjs-dist": "^4.0.379"
+    "pdfjs-dist": "^4.0.379",
+    "uuid": "^9.0.1"
   },
   "type": "module"
 }
