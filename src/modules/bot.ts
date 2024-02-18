@@ -1,105 +1,68 @@
-import { kMaxLength } from "buffer";
 import { writeFile } from "fs";
 import fetch from "node-fetch";
-import {v4 as uuidv4} from "uuid";
+import { v4 as uuid4} from "uuid";
+import Replicate from "replicate";
+import EventSource from "eventsource";
+import { StringMappingType } from "typescript";
 
-function Message(role: string, content: string)
-{
+interface Message {
+    Role: string,
+    Content: string,
+
+    toString: () => string
+}
+
+function createMessage(role: string, content: string): Message {
     return {
         Role: role,
         Content: content,
-        
+
         toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
     }
 }
-            
-function PromptJob(model, apikey, _stream) 
+
+export type TokenCallback = (tokens: string[]) => void;
+
+export interface ReplicateBot
 {
-    const MessageQueue = [];
+    Version: string,
+    Model: string,
+    ApiKey: string,
+    PromptString: string,
+    MessageQueue: Message[],
+    Messages: Message[],
+    Results: string[],
+    EndToken: string,
 
-    return {
-        ID: uuidv4(),
+    Result: () => string[],
+    StreamResult: (url: string) => void,
+    PollResult: (url: string, maxTokens?: number) => Promise<string[]> 
 
-        Stage: "Initialize",
+    Callback: TokenCallback,
 
-        PromptString: "",
+    Run: (model?: string, stream?: boolean) => Promise<ReplicateBot>,
 
-        Result: {},
+    Prompt: (message: string, role?: string) => ReplicateBot,
 
-        Prompt(message, stage = "Initialize")
-        {
-            MessageQueue.push({ Message: message, State: stage });
-
-            return this;
-        },
-
-        async Run()
-        {
-            while (MessageQueue.length > 0)
-            {
-                const message = MessageQueue.shift();
-           
-                this.PromptString += `${message.toString()}\n`;
-            }
-
-            this.Result = await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, 
-                                {
-                                    method: "POST",
-                                    headers: {
-                                        "Authorization": `Token ${apikey}`
-                                    },
-                                    body: JSON.stringify(
-                                        {
-                                            input: {
-                                                "prompt": message                                            
-                                            },
-                                            stream: _stream
-                                        }
-                                    )
-                                })).json(); 
-            return this.Result;
-        }
-    };
+    Save: (path: string) => void,
 }
 
-export function PromptJobManager()
-{  
-    const Jobs = new Map();
-    const ResultTokens = new Map();
-
-    return {
-        AddJob(job)
-        {
-            Jobs.set(job.ID, { Promise: job.Run(), Result: null });
-        },
-        
-        async RunJob(id)
-        {
-            Jobs[id].Result = await Jobs[id].Promise;
-        },
-
-        async RunAllJobs()
-        {
-            Jobs.forEach(async (value, key, map) => {
-                map[key].Result = await value;
-            });
-        }
-    };
-} 
-
-export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGenerateCallback = tokens => {})
+export function createReplicateBot(Version: string, Model: string, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
+    : ReplicateBot
 {   
-    const MessageQueue = [];
+    const MessageQueue: Message[] = [];
+ 
+    const Messages: Message[] = [];
 
-    const Messages = [];
-
-    const Results = [];
+    const Results: string[] = [];
 
     let PromptString = "";
 
-    let OnGenerateCallback; 
+    let OnGenerateCallback: TokenCallback;
 
     let JobManager;
+
+    let StreamEventSource: EventSource | null = null; 
 
     return { 
         Version,
@@ -113,16 +76,21 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
         Result: () => Results.map(result => result.substring(0, result.search(EndToken))),
 
-        async PollResult(url, maxTokens = 1000) 
+        async StreamResult(url: string)
         {
-            let output = null;
+            StreamEventSource = new EventSource(url); 
+        },
+        
+        async PollResult(url: string, maxTokens = 1000): Promise<string[]>
+        {
+            let output: string[] | null = null;
 
             while (output == null) 
             {
                 let response = await ((await fetch(url, {
                     method: "GET",
                     headers: { Authorization: `Token ${ApiKey}` }
-                })).json());
+                })).json()) as any;
 
                 if (response.output !== undefined) 
                 {
@@ -149,13 +117,13 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             return output;
         },
         
-        async Run(model = Model, stream = false) 
+        async Run(model: string = Model, stream: boolean = false): Promise<ReplicateBot>
         { 
             try
             {  
                 while (MessageQueue.length > 0)
                 { 
-                    const message = MessageQueue.shift();
+                    const message: Message = MessageQueue.shift() as Message;
 
                     PromptString += `${message.toString().trim()}\n`;
 
@@ -171,11 +139,11 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
                                             stream: stream
                                         }), 
                                     }
-                                )).json());
+                                )).json()) as any;
                 
                     if (message.Role != "system")
                     {
-                        Results.push((await this.PollResult(response.urls.get))
+                        Results.push((await this.PollResult(response.urls.get as string))
                                     .filter(token => token !== undefined)
                                     .map(token => token.toString())
                                     .join(""));
@@ -192,22 +160,23 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             return this;
         },
 
-        Prompt(message, role = "user") {
+        Prompt(message: string, role = "user"): ReplicateBot
+        {
             let messageObj;
            
-            MessageQueue.push(messageObj = Message(role, message));
+            MessageQueue.push(messageObj = createMessage(role, message));
 
             return this; 
         },
 
-        Save(path)
+        Save(path: string)
         {
             writeFile(path, this.PromptString, err => console.log(err));
         },
 
         get Callback()
         {
-            return callback;
+            return OnGenerateCallback;
         },
 
         set Callback(callback)
@@ -216,3 +185,4 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
         }
     };
 } 
+

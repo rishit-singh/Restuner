@@ -1,15 +1,14 @@
 import {getDocument} from "pdfjs-dist";
-
-type TokenCallback = (tokens: string[]) => void;
+import { ReplicateBot, createReplicateBot, TokenCallback } from "./bot";
 
 export function ResumeBot(Version: string, _Model: string, ApiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
 {
-    const Bot = ReplicateBot(Version, _Model, ApiKey);
+    const Bot = createReplicateBot(Version, _Model, ApiKey);
    
     let OnGenerateCallback: TokenCallback = onGenerateCallback;
 
     let resumeBuffer = "";
-
+    
     return {
          async LoadResume(buffer: string[]) {
             const pdf = await getDocument(buffer); 
