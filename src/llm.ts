@@ -45,7 +45,6 @@ is self-motivated and works with minimal supervision
 has B.S./M.S. in Computer Science, experience in developing two or more commercially used applications, or equivalent experience
 `);
 
-
 // console.log((await bot.Prompt(process.argv[2])
 //         .Prompt("thanks")
 //         .Run()).Result());

@@ -1,8 +1,9 @@
+import { kMaxLength } from "buffer";
 import { writeFile } from "fs";
 import fetch from "node-fetch";
 import {v4 as uuidv4} from "uuid";
 
-function Message(role, content)
+function Message(role: string, content: string)
 {
     return {
         Role: role,
@@ -27,9 +28,7 @@ function PromptJob(model, apikey, _stream)
 
         Prompt(message, stage = "Initialize")
         {
-            this.Stage = stage;
-
-            MessageQueue.push(message);
+            MessageQueue.push({ Message: message, State: stage });
 
             return this;
         },
@@ -64,7 +63,7 @@ function PromptJob(model, apikey, _stream)
 }
 
 export function PromptJobManager()
-{   
+{  
     const Jobs = new Map();
     const ResultTokens = new Map();
 
@@ -100,6 +99,8 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
     let OnGenerateCallback; 
 
+    let JobManager;
+
     return { 
         Version,
         Model,
@@ -116,13 +117,15 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
         {
             let output = null;
 
-            while (output == null) {
+            while (output == null) 
+            {
                 let response = await ((await fetch(url, {
                     method: "GET",
                     headers: { Authorization: `Token ${ApiKey}` }
                 })).json());
 
-                if (response.output !== undefined) {
+                if (response.output !== undefined) 
+                {
                     let outputSpread = [...response.output];
 
                     for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++) {
@@ -145,8 +148,9 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
 
             return output;
         },
-
-        async Run(model = Model, stream = false) { 
+        
+        async Run(model = Model, stream = false) 
+        { 
             try
             {  
                 while (MessageQueue.length > 0)
@@ -192,14 +196,13 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
             let messageObj;
            
             MessageQueue.push(messageObj = Message(role, message));
-            Messages.push(messageObj);
 
             return this; 
         },
 
         Save(path)
         {
-            writeFile(path, this.PromptString, err => err);
+            writeFile(path, this.PromptString, err => console.log(err));
         },
 
         get Callback()
@@ -211,6 +214,5 @@ export function ReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGener
         {
             OnGenerateCallback = callback;
         }
-    }
+    };
 } 
- 
