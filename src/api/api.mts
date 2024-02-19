@@ -56,7 +56,6 @@ app.post("/", upload.array("resume"), async (req, res) => {
 
 app.get("/output/", (req, res, id) => {
     res.send(Output[Output.length - 1]); 
-    
 });
 
 app.listen(port, () => {
