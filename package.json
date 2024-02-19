@@ -8,7 +8,9 @@
   "private": false,
   "dependencies": {
     "@cloudflare/ai": "^1.0.47",
+    "@types/cors": "^2.8.17",
     "@types/eventsource": "^1.1.15",
+    "@types/multer": "^1.4.11",
     "@types/node": "^20.11.19",
     "@types/uuid": "^9.0.8",
     "cors": "^2.8.5",
@@ -24,5 +26,11 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "uuid": "^9.0.1"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./bin/app.js",
+    "dev": "ts-node ./src/app.ts"
   }
 }

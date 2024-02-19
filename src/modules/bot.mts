@@ -18,7 +18,7 @@ function createMessage(role: string, content: string): Message {
         Content: content,
 
         toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
-    }
+    };
 }
 
 export type TokenCallback = (tokens: string[]) => void;

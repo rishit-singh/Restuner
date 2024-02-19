@@ -1,22 +1,25 @@
 import express from "express";
-import { ResumeBot } from "../modules/resumebot.js";
+import { ResumeBot } from "../modules/resumebot.mjs";
 import { readFileSync } from "fs";
 import cors from "cors";
 import multer from "multer";
+import { UnsafeCast } from "../util.js";
 
 const app = express();
 const upload = multer();
 
 const port = 3000;
 
-let Output = []; 
+let Output :string[] = []; 
 
-const LLM = ResumeBot(process.env.REPLICATE_VERSION, 
+const LLM = ResumeBot(process.env.REPLICATE_VERSION as string, 
                     process.argv[2], 
-                    process.env.MISTRALKEY);
+                    process.env.MISTRALKEY as string);
 
 app.use(cors());
 app.use(express.json());
+
+type File = Express.Multer.File; 
 
 app.post("/", upload.array("resume"), async (req, res) => {
     LLM.Callback = ((tokens) => {
@@ -30,7 +33,7 @@ app.post("/", upload.array("resume"), async (req, res) => {
         res.write(Output[Output.length - 1]);
     });    
     
-    LLM.LoadResume(req.files[0].buffer.buffer).then(result => {
+    LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer).then(result => {
         console.log("RESUME LOADED");
 
         console.log(Output);
