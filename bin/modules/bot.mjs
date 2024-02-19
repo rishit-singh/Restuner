@@ -1,33 +1,78 @@
 import { writeFile } from "fs";
 import fetch from "node-fetch";
 import EventSource from "eventsource";
-function createMessage(role, content) {
+import Replicate from "replicate";
+export function createMessage(role, content) {
     return {
         Role: role,
         Content: content,
         toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
     };
 }
-export function createReplicateBot(Version, Model, ApiKey, EndToken = "RREND", onGenerateCallback = (tokens) => { }) {
+export var BotState;
+(function (BotState) {
+    BotState[BotState["Setup"] = 0] = "Setup";
+    BotState[BotState["Generate"] = 1] = "Generate";
+    BotState[BotState["Idle"] = 2] = "Idle";
+})(BotState || (BotState = {}));
+export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGenerateCallback = (tokens) => { }) {
     const MessageQueue = [];
     const Messages = [];
     const Results = [];
     let PromptString = "";
-    let OnGenerateCallback;
+    let _State = BotState.Idle;
+    let OnGenerateCallback = onGenerateCallback;
     let JobManager;
     let StreamEventSource = null;
+    const ReplicateInstance = new Replicate();
+    let Version = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id;
     return {
         Version,
         Model,
         ApiKey,
-        PromptString,
         MessageQueue,
         Messages,
         Results,
         EndToken,
-        Result: () => Results.map(result => result.substring(0, result.search(EndToken))),
-        async StreamResult(url) {
-            StreamEventSource = new EventSource(url);
+        get State() {
+            return _State;
+        },
+        get PromptString() {
+            return PromptString;
+        },
+        async Setup(setupPrompts = [], stream = false) {
+            setupPrompts.forEach(prompt => MessageQueue.push(prompt));
+            try {
+                this.Run(Model, stream);
+            }
+            catch (e) {
+                console.log(`Error occurred during setup: ${e}`);
+                return false;
+            }
+            return true;
+        },
+        Result: () => Results.map(result => {
+            const joined = result.join("");
+            return joined.substring(0, joined.search(EndToken));
+        }),
+        StreamResult(url) {
+            StreamEventSource = new EventSource(url, { withCredentials: true });
+            Results.push([]);
+            let index = Results.length - 1;
+            _State = BotState.Generate;
+            StreamEventSource.addEventListener("output", (e) => {
+                OnGenerateCallback(e.data);
+                Results[index].push(e.data);
+            });
+            StreamEventSource.addEventListener("error", (e) => {
+                throw new Error(`Error occured while streaming: ${JSON.parse(e.data)}`);
+            });
+            StreamEventSource.addEventListener("done", (e) => {
+                StreamEventSource.close();
+                console.log("done", JSON.parse(e.data));
+                _State = BotState.Idle;
+            });
+            return index;
         },
         async PollResult(url, maxTokens = 1000) {
             let output = null;
@@ -58,23 +103,36 @@ export function createReplicateBot(Version, Model, ApiKey, EndToken = "RREND", o
                 while (MessageQueue.length > 0) {
                     const message = MessageQueue.shift();
                     PromptString += `${message.toString().trim()}\n`;
-                    let response = (await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
-                        method: "POST",
-                        headers: { Authorization: `Token ${ApiKey}` },
-                        body: JSON.stringify({
+                    if (!stream) {
+                        let response = (await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
+                            method: "POST",
+                            headers: { Authorization: `Token ${ApiKey}` },
+                            body: JSON.stringify({
+                                version: Version,
+                                input: {
+                                    prompt: PromptString
+                                },
+                                stream: stream
+                            }),
+                        })).json());
+                        if (message.Role != "system") {
+                            Results.push([(await this.PollResult(response.urls.get))
+                                    .filter(token => token !== undefined)
+                                    .map(token => token.toString())
+                                    .join("")]);
+                            PromptString += `${Results[Results.length - 1].join("").trim()}\n`;
+                        }
+                    }
+                    else {
+                        console.log(Model);
+                        console.log(Version);
+                        this.StreamResult((await ReplicateInstance.predictions.create({
                             version: Version,
-                            input: {
-                                prompt: PromptString
-                            },
+                            input: { prompt: PromptString },
                             stream: stream
-                        }),
-                    })).json());
-                    if (message.Role != "system") {
-                        Results.push((await this.PollResult(response.urls.get))
-                            .filter(token => token !== undefined)
-                            .map(token => token.toString())
-                            .join(""));
-                        PromptString += `${Results[Results.length - 1].trim()}\n`;
+                        })).urls.stream);
+                        while (this.State == BotState.Generate) // wait until idle before generating further
+                            await new Promise((resolve) => setTimeout(resolve, 30));
                     }
                 }
             }

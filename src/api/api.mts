@@ -4,6 +4,7 @@ import { readFileSync } from "fs";
 import cors from "cors";
 import multer from "multer";
 import { UnsafeCast } from "../util.js";
+import { Model } from "../modules/bot.mjs"; 
 
 const app = express();
 const upload = multer();
@@ -12,9 +13,7 @@ const port = 3000;
 
 let Output :string[] = []; 
 
-const LLM = ResumeBot(process.env.REPLICATE_VERSION as string, 
-                    process.argv[2], 
-                    process.env.MISTRALKEY as string);
+const LLM = await ResumeBot({Owner: "", Name: ""});
 
 app.use(cors());
 app.use(express.json());

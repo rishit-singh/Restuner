@@ -4,14 +4,14 @@ import EventSource from "eventsource";
 import Replicate from "replicate";
 import { waitForDebugger } from "inspector";
 
-interface Message {
+export interface Message {
     Role: string,
     Content: string,
 
     toString: () => string
 }
 
-function createMessage(role: string, content: string): Message {
+export function createMessage(role: string, content: string): Message {
     return {
         Role: role,
         Content: content,
@@ -60,8 +60,8 @@ export interface ReplicateBot
     toString(): string
 }
 
-export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
-    : ReplicateBot
+export async function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
+    : Promise<ReplicateBot>
 {   
     const MessageQueue: Message[] = [];
  
@@ -81,14 +81,8 @@ export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RRE
 
     const ReplicateInstance = new Replicate();  
 
-    let Version: string = ""; 
-
-    ReplicateInstance.models.get(Model.Owner, Model.Name).then(
-        e => {
-            Version = e.latest_version?.id as string
-        }
-    );
-
+    let Version: string = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id as string;
+    
     return { 
         Version,
         Model,
@@ -111,10 +105,10 @@ export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RRE
         async Setup(setupPrompts: Message[] = [], stream: boolean = false): Promise<boolean>
         {   
             setupPrompts.forEach(prompt => MessageQueue.push(prompt));
-            
+    
             try
             {
-                await this.Run(); 
+                (this as ReplicateBot).Run(Model, stream); 
             }
             catch (e)
             {
@@ -225,7 +219,7 @@ export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RRE
                         )).json()) as any;
 
                         if (message.Role != "system") {
-                            Results.push([(await this.PollResult(response.urls.get as string))
+                            Results.push([(await (this as ReplicateBot).PollResult(response.urls.get as string))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())
                                 .join("")]);
@@ -235,13 +229,16 @@ export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RRE
                     }
                     else
                     {
-                        this.StreamResult((await ReplicateInstance.predictions.create({
+                        console.log(Model);
+                        console.log(Version); 
+
+                         (this as ReplicateBot).StreamResult((await ReplicateInstance.predictions.create({
                             version: Version,
                             input: { prompt: PromptString },    
                             stream: stream
                         })).urls.stream as string);
 
-                        while (this.State == BotState.Generate) // wait until idle before generating further
+                        while ( (this as ReplicateBot).State == BotState.Generate) // wait until idle before generating further
                             await new Promise((resolve) => setTimeout(resolve, 30));
                     } 
                 }
@@ -260,12 +257,12 @@ export function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RRE
            
             MessageQueue.push(messageObj = createMessage(role, message));
 
-            return this; 
+            return  (this as ReplicateBot); 
         },
 
         Save(path: string)
         {
-            writeFile(path, this.PromptString, err => console.log(err));
+            writeFile(path,  (this as ReplicateBot).PromptString, err => console.log(err));
         },
 
         get Callback()

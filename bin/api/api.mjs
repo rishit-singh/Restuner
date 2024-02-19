@@ -7,7 +7,7 @@ const app = express();
 const upload = multer();
 const port = 3000;
 let Output = [];
-const LLM = ResumeBot(process.env.REPLICATE_VERSION, process.argv[2], process.env.MISTRALKEY);
+const LLM = await ResumeBot({ Owner: "", Name: "" });
 app.use(cors());
 app.use(express.json());
 app.post("/", upload.array("resume"), async (req, res) => {

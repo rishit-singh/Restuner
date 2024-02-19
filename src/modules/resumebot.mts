@@ -1,9 +1,9 @@
 import {getDocument} from "pdfjs-dist";
-import { ReplicateBot, createReplicateBot, TokenCallback } from "./bot.mjs";
+import { ReplicateBot, createReplicateBot, TokenCallback, Model } from "./bot.mjs";
 
-export function ResumeBot(Version: string, _Model: string, ApiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
+export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
 {
-    const Bot = createReplicateBot(Version, _Model, ApiKey);
+    const Bot = await createReplicateBot(_Model, "");
    
     let OnGenerateCallback: TokenCallback = onGenerateCallback;
 

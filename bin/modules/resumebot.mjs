@@ -1,7 +1,7 @@
 import { getDocument } from "pdfjs-dist";
 import { createReplicateBot } from "./bot.mjs";
-export function ResumeBot(Version, _Model, ApiKey, onGenerateCallback = (tokens) => { }) {
-    const Bot = createReplicateBot(Version, _Model, ApiKey);
+export async function ResumeBot(_Model, onGenerateCallback = (tokens) => { }) {
+    const Bot = await createReplicateBot(_Model, "");
     let OnGenerateCallback = onGenerateCallback;
     let resumeBuffer = "";
     return {
