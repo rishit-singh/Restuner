@@ -24,7 +24,10 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
     let OnGenerateCallback = onGenerateCallback;
     let JobManager;
     let StreamEventSource = null;
-    const ReplicateInstance = new Replicate();
+    const ReplicateInstance = new Replicate({
+        auth: process.env.REPLICATE_API_TOKEN
+    });
+    console.log(Model);
     let Version = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id;
     return {
         Version,
@@ -65,12 +68,11 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                 Results[index].push(e.data);
             });
             StreamEventSource.addEventListener("error", (e) => {
-                throw new Error(`Error occured while streaming: ${JSON.parse(e.data)}`);
             });
             StreamEventSource.addEventListener("done", (e) => {
-                StreamEventSource.close();
-                console.log("done", JSON.parse(e.data));
                 _State = BotState.Idle;
+                StreamEventSource.close();
+                console.log(_State);
             });
             return index;
         },
@@ -79,7 +81,7 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
             while (output == null) {
                 let response = await ((await fetch(url, {
                     method: "GET",
-                    headers: { Authorization: `Token ${ApiKey}` }
+                    headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` }
                 })).json());
                 if (response.output !== undefined) {
                     let outputSpread = [...response.output];
@@ -98,25 +100,14 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
             }
             return output;
         },
-        async Run(model = Model, stream = false) {
+        async Run(model = Model, stream = true) {
             try {
                 while (MessageQueue.length > 0) {
                     const message = MessageQueue.shift();
                     PromptString += `${message.toString().trim()}\n`;
                     if (!stream) {
-                        let response = (await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`, {
-                            method: "POST",
-                            headers: { Authorization: `Token ${ApiKey}` },
-                            body: JSON.stringify({
-                                version: Version,
-                                input: {
-                                    prompt: PromptString
-                                },
-                                stream: stream
-                            }),
-                        })).json());
                         if (message.Role != "system") {
-                            Results.push([(await this.PollResult(response.urls.get))
+                            Results.push([(await this.PollResult((await ReplicateInstance.predictions.create({ version: Version, model: `${Model.Owner}/${Model.Name}`, input: { prompt: PromptString } })).urls.get))
                                     .filter(token => token !== undefined)
                                     .map(token => token.toString())
                                     .join("")]);
@@ -124,16 +115,25 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                         }
                     }
                     else {
-                        console.log(Model);
-                        console.log(Version);
-                        this.StreamResult((await ReplicateInstance.predictions.create({
+                        const prompt = async () => this.StreamResult((await ReplicateInstance.predictions.create({
                             version: Version,
+                            model: `${Model.Owner}/${Model.Name}`,
                             input: { prompt: PromptString },
                             stream: stream
                         })).urls.stream);
+                        try {
+                            prompt();
+                        }
+                        catch (e) {
+                            console.log(e);
+                            prompt();
+                        }
                         while (this.State == BotState.Generate) // wait until idle before generating further
-                            await new Promise((resolve) => setTimeout(resolve, 30));
+                         {
+                            await new Promise((resolve) => { setTimeout(resolve, 30); });
+                        }
                     }
+                    console.log("wait");
                 }
             }
             catch (e) {

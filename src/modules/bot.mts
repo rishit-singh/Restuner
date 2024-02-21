@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import EventSource from "eventsource";
 import Replicate from "replicate";
 import { waitForDebugger } from "inspector";
+import { version } from "os";
 
 export interface Message {
     Role: string,
@@ -79,7 +80,11 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
 
     let StreamEventSource: EventSource | null = null; 
 
-    const ReplicateInstance = new Replicate();  
+    const ReplicateInstance = new Replicate({
+        auth: process.env.REPLICATE_API_TOKEN
+    });  
+
+    console.log(Model);
 
     let Version: string = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id as string;
     
@@ -142,15 +147,14 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
               });
 
             StreamEventSource.addEventListener("error", (e) => {
-                throw new Error(`Error occured while streaming: ${JSON.parse(e.data)}`);
+
             });
 
             StreamEventSource.addEventListener("done", (e) => {
+                _State = BotState.Idle;
                 (StreamEventSource as EventSource).close();
 
-                console.log("done", JSON.parse(e.data));
-
-                _State = BotState.Idle;
+                console.log(_State); 
             });
 
             return index;
@@ -164,7 +168,7 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
             {
                 let response = await ((await fetch(url, {
                     method: "GET",
-                    headers: { Authorization: `Token ${ApiKey}` }
+                    headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` }
                 })).json()) as any;
 
                 if (response.output !== undefined) 
@@ -192,7 +196,7 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
             return output;
         },
         
-        async Run(model: Model = Model, stream: boolean = false): Promise<ReplicateBot>
+        async Run(model: Model = Model, stream: boolean = true): Promise<ReplicateBot>
         { 
             try
             {  
@@ -204,22 +208,9 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
 
                     if (!stream)
                     {
-                        let response = (await (await fetch(`https://api.replicate.com/v1/models/${model}/predictions`,
-                            {
-                                method: "POST",
-                                headers: { Authorization: `Token ${ApiKey}` },
-                                body: JSON.stringify({
-                                    version: Version,
-                                    input: {
-                                        prompt: PromptString
-                                    },
-                                    stream: stream
-                                }),
-                            }
-                        )).json()) as any;
-
                         if (message.Role != "system") {
-                            Results.push([(await (this as ReplicateBot).PollResult(response.urls.get as string))
+                            Results.push([(await (this as ReplicateBot).PollResult(
+                                                                        (await ReplicateInstance.predictions.create({version: Version, model: `${Model.Owner}/${Model.Name}`, input: {prompt:  PromptString}})).urls.get as string))
                                 .filter(token => token !== undefined)
                                 .map(token => token.toString())
                                 .join("")]);
@@ -229,18 +220,31 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
                     }
                     else
                     {
-                        console.log(Model);
-                        console.log(Version); 
-
-                         (this as ReplicateBot).StreamResult((await ReplicateInstance.predictions.create({
+                        const prompt = async () => (this as ReplicateBot).StreamResult((await ReplicateInstance.predictions.create({
                             version: Version,
-                            input: { prompt: PromptString },    
+                            model: `${Model.Owner}/${Model.Name}`,
+                            input: { prompt: PromptString },
                             stream: stream
                         })).urls.stream as string);
 
-                        while ( (this as ReplicateBot).State == BotState.Generate) // wait until idle before generating further
-                            await new Promise((resolve) => setTimeout(resolve, 30));
+
+                        try
+                        {
+                            prompt();
+                        }
+                        catch (e)
+                        {
+                            console.log(e);
+
+                            prompt(); 
+                        }
+                        while ((this as ReplicateBot).State == BotState.Generate) // wait until idle before generating further
+                        {
+                            await new Promise((resolve) => {setTimeout(resolve, 30);  });
+                        }
                     } 
+
+                    console.log("wait");
                 }
             }
             catch (e) 
