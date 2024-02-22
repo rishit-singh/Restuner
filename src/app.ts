@@ -9,7 +9,9 @@ import { UnsafeCast } from "./util.js";
 
 async function main(): Promise<void> 
 {
-    const replicateBot: ReplicateBot = await createReplicateBot({
+    let model: Model;
+
+    const replicateBot: ReplicateBot = await createReplicateBot(model = {
         Owner: "mistralai",
         Name: "mixtral-8x7b-instruct-v0.1"
     }, "", "RREND");
@@ -18,17 +20,17 @@ async function main(): Promise<void>
 
     try 
     {
-        await replicateBot.Setup([createMessage("user", "Hello LLM. Generate me a sample python code")], true);
+        await replicateBot.Setup([createMessage("user", "Hello LLM. ")], true);
         
-        await replicateBot.Prompt("Okay write the same program in C++", "user")
-                    .Prompt("Now write the same program in C#", "user")
-                    .Prompt("Now write the same program in haskell", "user")
+        await replicateBot.Prompt("How are you?", "user")
+                    .Prompt("Okay", "user")
                     .Run();
     }
     catch (e)
     {
         console.log(e);
     }
+
     console.log(replicateBot.Result()); 
 }
 

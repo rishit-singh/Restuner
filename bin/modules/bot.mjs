@@ -23,7 +23,8 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
     let _State = BotState.Idle;
     let OnGenerateCallback = onGenerateCallback;
     let JobManager;
-    let StreamEventSource = null;
+    // let EventSources[eventSourceIndex]: EventSource | null = null; 
+    let EventSources = [];
     const ReplicateInstance = new Replicate({
         auth: process.env.REPLICATE_API_TOKEN
     });
@@ -46,7 +47,8 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
         async Setup(setupPrompts = [], stream = false) {
             setupPrompts.forEach(prompt => MessageQueue.push(prompt));
             try {
-                this.Run(Model, stream);
+                _State = BotState.Setup;
+                await this.Run(Model, stream);
             }
             catch (e) {
                 console.log(`Error occurred during setup: ${e}`);
@@ -58,22 +60,29 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
             const joined = result.join("");
             return joined.substring(0, joined.search(EndToken));
         }),
-        StreamResult(url) {
-            StreamEventSource = new EventSource(url, { withCredentials: true });
+        async StreamResult(url) {
+            EventSources.push(new EventSource(url, { withCredentials: true }));
             Results.push([]);
             let index = Results.length - 1;
-            _State = BotState.Generate;
-            StreamEventSource.addEventListener("output", (e) => {
+            let eventSourceIndex = EventSources.length - 1;
+            EventSources[eventSourceIndex].addEventListener("output", (e) => {
+                _State = BotState.Generate;
                 OnGenerateCallback(e.data);
                 Results[index].push(e.data);
             });
-            StreamEventSource.addEventListener("error", (e) => {
+            EventSources[eventSourceIndex].onmessage = message => console.log(`Message: ${message.data}`);
+            EventSources[eventSourceIndex].addEventListener("error", (e) => {
+                console.log(`Error ${e}`);
             });
-            StreamEventSource.addEventListener("done", (e) => {
+            EventSources[eventSourceIndex].addEventListener("done", (e) => {
                 _State = BotState.Idle;
-                StreamEventSource.close();
+                EventSources[eventSourceIndex]?.close();
+                console.log(`\n${EventSources[eventSourceIndex]?.url} closed\n`);
+                PromptString += `${Results[index].join("")}\n`;
                 console.log(_State);
             });
+            while (_State == BotState.Generate)
+                await new Promise(resolve => setTimeout(resolve, 30));
             return index;
         },
         async PollResult(url, maxTokens = 1000) {
@@ -105,6 +114,7 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                 while (MessageQueue.length > 0) {
                     const message = MessageQueue.shift();
                     PromptString += `${message.toString().trim()}\n`;
+                    console.log(PromptString);
                     if (!stream) {
                         if (message.Role != "system") {
                             Results.push([(await this.PollResult((await ReplicateInstance.predictions.create({ version: Version, model: `${Model.Owner}/${Model.Name}`, input: { prompt: PromptString } })).urls.get))
@@ -128,13 +138,11 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                             console.log(e);
                             prompt();
                         }
-                        while (this.State == BotState.Generate) // wait until idle before generating further
-                         {
-                            await new Promise((resolve) => { setTimeout(resolve, 30); });
-                        }
+                        while (_State == BotState.Generate) // wait until idle before generating further
+                            await new Promise(resolve => setTimeout(resolve, 30));
                     }
-                    console.log("wait");
                 }
+                console.log("END");
             }
             catch (e) {
                 console.error(e);

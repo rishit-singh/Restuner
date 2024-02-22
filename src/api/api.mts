@@ -25,7 +25,7 @@ app.post("/", upload.array("resume"), async (req, res) => {
         const joined = tokens.join("");
         
         if (Output.indexOf(joined) == -1)
-            Output.push(joined);
+                Output.push(joined);
 
         console.log(`\n${joined}\n`);
         
