@@ -8,16 +8,14 @@ async function main() {
         Owner: "mistralai",
         Name: "mixtral-8x7b-instruct-v0.1"
     }, "", "RREND");
-    replicateBot.Callback = (tokens) => process.stdout.write(UnsafeCast(tokens));
+    replicateBot.Callback = (tokens) => process.stdout.write(UnsafeCast(tokens[0]));
     try {
-        await replicateBot.Setup([createMessage("user", "Hello LLM. ")], true);
-        await replicateBot.Prompt("How are you?", "user")
-            .Prompt("Okay", "user")
+        await replicateBot.Setup([createMessage("user", "write a recursive function in python")], true);
+        await replicateBot.Prompt("Now translate it to c++", "user")
             .Run();
     }
     catch (e) {
         console.log(e);
     }
-    console.log(replicateBot.Result());
 }
 main();

@@ -15,6 +15,15 @@ export var BotState;
     BotState[BotState["Generate"] = 1] = "Generate";
     BotState[BotState["Idle"] = 2] = "Idle";
 })(BotState || (BotState = {}));
+export function createBotEventSource(URL, InitDict) {
+    return {
+        Source: new EventSource(URL, InitDict),
+        State: BotState.Idle,
+        AddEventListener(eventName) {
+            return this;
+        }
+    };
+}
 export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGenerateCallback = (tokens) => { }) {
     const MessageQueue = [];
     const Messages = [];
@@ -23,12 +32,10 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
     let _State = BotState.Idle;
     let OnGenerateCallback = onGenerateCallback;
     let JobManager;
-    // let EventSources[eventSourceIndex]: EventSource | null = null; 
     let EventSources = [];
     const ReplicateInstance = new Replicate({
         auth: process.env.REPLICATE_API_TOKEN
     });
-    console.log(Model);
     let Version = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id;
     return {
         Version,
@@ -60,31 +67,6 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
             const joined = result.join("");
             return joined.substring(0, joined.search(EndToken));
         }),
-        async StreamResult(url) {
-            EventSources.push(new EventSource(url, { withCredentials: true }));
-            Results.push([]);
-            let index = Results.length - 1;
-            let eventSourceIndex = EventSources.length - 1;
-            EventSources[eventSourceIndex].addEventListener("output", (e) => {
-                _State = BotState.Generate;
-                OnGenerateCallback(e.data);
-                Results[index].push(e.data);
-            });
-            EventSources[eventSourceIndex].onmessage = message => console.log(`Message: ${message.data}`);
-            EventSources[eventSourceIndex].addEventListener("error", (e) => {
-                console.log(`Error ${e}`);
-            });
-            EventSources[eventSourceIndex].addEventListener("done", (e) => {
-                _State = BotState.Idle;
-                EventSources[eventSourceIndex]?.close();
-                console.log(`\n${EventSources[eventSourceIndex]?.url} closed\n`);
-                PromptString += `${Results[index].join("")}\n`;
-                console.log(_State);
-            });
-            while (_State == BotState.Generate)
-                await new Promise(resolve => setTimeout(resolve, 30));
-            return index;
-        },
         async PollResult(url, maxTokens = 1000) {
             let output = null;
             while (output == null) {
@@ -114,7 +96,6 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                 while (MessageQueue.length > 0) {
                     const message = MessageQueue.shift();
                     PromptString += `${message.toString().trim()}\n`;
-                    console.log(PromptString);
                     if (!stream) {
                         if (message.Role != "system") {
                             Results.push([(await this.PollResult((await ReplicateInstance.predictions.create({ version: Version, model: `${Model.Owner}/${Model.Name}`, input: { prompt: PromptString } })).urls.get))
@@ -125,21 +106,12 @@ export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGe
                         }
                     }
                     else {
-                        const prompt = async () => this.StreamResult((await ReplicateInstance.predictions.create({
-                            version: Version,
-                            model: `${Model.Owner}/${Model.Name}`,
-                            input: { prompt: PromptString },
-                            stream: stream
-                        })).urls.stream);
-                        try {
-                            prompt();
+                        Results.push([]);
+                        for await (const event of ReplicateInstance.stream(`${Model.Owner}/${Model.Name}`, { input: { prompt: PromptString } })) {
+                            OnGenerateCallback([event.data.toString()]);
+                            Results[Results.length - 1].push(event.data.toString());
                         }
-                        catch (e) {
-                            console.log(e);
-                            prompt();
-                        }
-                        while (_State == BotState.Generate) // wait until idle before generating further
-                            await new Promise(resolve => setTimeout(resolve, 30));
+                        PromptString += `${Results[Results.length - 1].join("")}\n`;
                     }
                 }
                 console.log("END");
