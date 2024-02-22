@@ -1,0 +1,84 @@
+You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided.
+[INST] Heres the resume 
+. Dont generate any info yet, wait for the job description. [/INST]
+[INST] Tune and recreate this resume to match this As a Full Stack Developer at Krux you will make an impact by building a core component of our product that allows our customers to derive value and insight. You will work with a team that is self-motivated to solve problems, excited to learn and be challenged, and likes to have fun.
+ 
+        Who are we?
+        
+        Krux builds innovative SAAS solutions for the mining industry. We empower our customers to make better decisions through real-time data management and analytics. Understanding our customer's needs and the ability to solve their problems is what sets us apart. Krux, founded in 2016 and headquartered in Alberta, has global reach. We support client's operations on every continent (well, except Antarctica).
+         
+        What you will do
+        
+        Develop attractive and highly useable applications with a focus on performance, security, and scalability.
+        Work with business and engineering teams to define, design, develop, test, troubleshoot, and deploy solutions.
+        Collaborate with the team to continuously improve our best practices and mentor other developers.
+        
+        
+        Who you are
+        
+        You are passionate about building software.
+        You embrace new technology and are excited to expand your skills.
+        You love being challenged to solve a new problem.
+        You are a self-starter who thrives in a fast-paced environment.
+        You are a team player that is always ready to help out a co-worker.
+        You are a champion for code review and automated testing.
+        
+        
+        What you bring
+        
+        7+ years experience working as a full stack developer or similar role.
+        Post-secondary training in computer science or software development.
+        Broad technical experience with emphasis on the following areas:
+        Web Development using Angular 4+, .NET, C#, ASP.NET MVC, JavaScript, jQuery, CSS, Bootstrap
+        NET Core API development
+        Database Development using Microsoft SQL, T-SQL
+        Unit and integration tests
+        Microsoft Azure PAAS environment
+        Experience with dev tools including Git, Azure DevOps, Visual Studio, Jira.
+        Excellent written and verbal communication skills.
+        Strong attention to detail, critical thinking, and problem-solving skills.
+        Ability to collaborate and operate in an agile environment.
+        . [/INST]
+**Full Stack Developer Resume**
+
+*As a Full Stack Developer at Krux, you will build a core component of our product that allows customers to derive value and insight. You will work with a self-motivated team that is excited to learn, be challenged, and likes to have fun. The team is committed to understanding customer needs and solving their problems, making Krux a leading SAAS solution provider for the mining industry.*
+
+**Technical Skills**
+
+- Develop attractive and highly usable applications with a focus on performance, security, and scalability using:
+  - Angular 4+, .NET, C#, ASP.NET MVC, JavaScript, jQuery, CSS, Bootstrap
+  - Web Development
+  - .NET Core API development
+  - Database Development using Microsoft SQL, T-SQL
+  - Unit and integration tests
+  - Microsoft Azure PAAS environment
+  - Experience with dev tools including Git, Azure DevOps, Visual Studio, Jira.
+
+**Professional Experience**
+
+- Full Stack Developer or similar role with 7+ years of experience.
+
+**Education**
+
+- Post-secondary training in computer science or software development.
+
+**Personal Attributes**
+
+- Passionate about building software.
+- Embrace new technology and eager to expand skills.
+- Love being challenged to solve new problems.
+- Self-starter who thrives in a fast-paced environment.
+- Team player, always ready to help out a co-worker.
+- Champion for code review and automated testing.
+- Excellent written and verbal communication skills.
+- Strong attention to detail, critical thinking, and problem-solving skills.
+- Ability to collaborate and operate in an agile environment.
+
+**Relevance to Krux Full Stack Developer Position**
+
+- Technical skills10/10
+- Professional experience: 9/10
+- Education8/10
+- Personal attributes/10
+
+The candidate's resume is highly relevant to the Krux Full Stack Developer position, with a strong emphasis on technical skills, professional experience, and personal attributes that align with the job requirements. The education section meets the minimum requirement of post-secondary training in computer science or software development. Overall, the{}

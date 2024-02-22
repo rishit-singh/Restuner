@@ -1,7 +1,8 @@
 import { getDocument } from "pdfjs-dist";
-import { createReplicateBot } from "./bot.mjs";
-export async function ResumeBot(_Model, onGenerateCallback = (tokens) => { }) {
-    const Bot = await createReplicateBot(_Model, "");
+import { createReplicateBot, createMessage } from "./bot.mjs";
+export async function createResumeBot(_Model, onGenerateCallback = (tokens) => { }) {
+    console.log(_Model);
+    const Bot = await createReplicateBot(_Model, process.env.REPLICATE_API_TOKEN);
     let OnGenerateCallback = onGenerateCallback;
     let resumeBuffer = "";
     return {
@@ -36,7 +37,7 @@ export async function ResumeBot(_Model, onGenerateCallback = (tokens) => { }) {
             Bot.Callback = OnGenerateCallback;
         },
         async Tune(jobDescription) {
-            const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Put RREND as the last token.`)
+            const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
                 .Run());
             console.log(`Prompt count: ${Bot.Messages.length}`);
             Bot.Save("prompts.txt");
@@ -45,10 +46,9 @@ export async function ResumeBot(_Model, onGenerateCallback = (tokens) => { }) {
         async Prompt(prompt) {
             return (await Bot.Prompt(prompt).Run());
         },
-        async Initialize(resumePath = null) {
-            return (await Bot.Prompt("You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Respond with OK only if you understand and make sure that the last token of your every response is 'RREND'")
-                .Prompt(`Heres the resume \n${this.ResumeBuffer}. Dont generate any info yet, wait for the job description. Also make sure that the last token of your every response is RREND`)
-                .Run()).Results;
+        async Initialize() {
+            return await Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided."),
+                createMessage("user", `Heres the resume \n${this.ResumeBuffer}. Dont generate any info yet, wait for the job description.`)]);
         },
         ResumeBuffer: resumeBuffer,
     };

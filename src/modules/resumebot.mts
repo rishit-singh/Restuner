@@ -1,9 +1,28 @@
 import {getDocument} from "pdfjs-dist";
-import { ReplicateBot, createReplicateBot, TokenCallback, Model } from "./bot.mjs";
+import { ReplicateBot, createReplicateBot, TokenCallback, Model, createMessage } from "./bot.mjs";
+import { UnsafeCast } from "../util.js";
 
-export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
+export interface ResumeBot
 {
-    const Bot = await createReplicateBot(_Model, "");
+    LoadResume: (buffer: ArrayBuffer) => void,
+
+    Model: Model,
+
+    ResumeBuffer: string,
+
+    Callback: TokenCallback,
+
+    Tune: (tokens: string) => void,
+
+    Prompt: (prompt: string) => void,
+    
+    Initialize: () => void
+}
+
+export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { }) : Promise<ResumeBot>
+{
+    console.log(_Model);
+    const Bot = await createReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
    
     let OnGenerateCallback: TokenCallback = onGenerateCallback;
 
@@ -11,7 +30,7 @@ export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback
     
     return {
          async LoadResume(buffer: ArrayBuffer) {
-            const pdf = await getDocument(buffer); 
+            const pdf = await getDocument(buffer as Uint8Array); 
             
             await pdf.promise
                 .then(async (doc) => {
@@ -29,7 +48,7 @@ export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback
                         }
                     });
 
-            this.ResumeBuffer = resumeBuffer;
+            (this as ResumeBot).ResumeBuffer = resumeBuffer;
         },
 
         set Model(model)
@@ -56,7 +75,7 @@ export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback
         
         async Tune(jobDescription: string)
         {
-            const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Put RREND as the last token.`)
+            const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
                             .Run());
 
             console.log(`Prompt count: ${Bot.Messages.length}`);
@@ -71,11 +90,10 @@ export async function ResumeBot(_Model: Model, onGenerateCallback: TokenCallback
             return (await Bot.Prompt(prompt).Run());
         },
 
-        async Initialize(resumePath: string | null = null)
+        async Initialize()
         {   
-            return (await Bot.Prompt("You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Respond with OK only if you understand and make sure that the last token of your every response is 'RREND'")
-                            .Prompt(`Heres the resume \n${this.ResumeBuffer}. Dont generate any info yet, wait for the job description. Also make sure that the last token of your every response is RREND`)
-                            .Run()).Results;
+            return await Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided."),
+                                    createMessage("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)]);
         },
         
         ResumeBuffer: resumeBuffer,

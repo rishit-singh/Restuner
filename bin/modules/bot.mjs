@@ -1,6 +1,5 @@
 import { writeFile } from "fs";
 import fetch from "node-fetch";
-import EventSource from "eventsource";
 import Replicate from "replicate";
 export function createMessage(role, content) {
     return {
@@ -15,15 +14,6 @@ export var BotState;
     BotState[BotState["Generate"] = 1] = "Generate";
     BotState[BotState["Idle"] = 2] = "Idle";
 })(BotState || (BotState = {}));
-export function createBotEventSource(URL, InitDict) {
-    return {
-        Source: new EventSource(URL, InitDict),
-        State: BotState.Idle,
-        AddEventListener(eventName) {
-            return this;
-        }
-    };
-}
 export async function createReplicateBot(Model, ApiKey, EndToken = "RREND", onGenerateCallback = (tokens) => { }) {
     const MessageQueue = [];
     const Messages = [];

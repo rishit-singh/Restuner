@@ -13,7 +13,7 @@ const port = 3000;
 
 let Output :string[] = []; 
 
-const LLM = await ResumeBot({Owner: "", Name: ""});
+// const LLM = await ResumeBot({Owner: "", Name: ""});
 
 app.use(cors());
 app.use(express.json());
@@ -21,34 +21,34 @@ app.use(express.json());
 type File = Express.Multer.File; 
 
 app.post("/", upload.array("resume"), async (req, res) => {
-    LLM.Callback = ((tokens) => {
-        const joined = tokens.join("");
+    // LLM.Callback = ((tokens) => {
+    //     const joined = tokens.join("");
         
-        if (Output.indexOf(joined) == -1)
-                Output.push(joined);
+    //     if (Output.indexOf(joined) == -1)
+    //             Output.push(joined);
 
-        console.log(`\n${joined}\n`);
+    //     console.log(`\n${joined}\n`);
         
-        res.write(Output[Output.length - 1]);
-    });    
+    //     res.write(Output[Output.length - 1]);
+    // });    
     
-    LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer).then(result => {
-        console.log("RESUME LOADED");
+    // LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer).then(result => {
+    //     console.log("RESUME LOADED");
 
-        console.log(Output);
+    //     console.log(Output);
 
-        LLM.Initialize(null).then(result => {
-            console.log("LLM INITIALIZED");
+    //     LLM.Initialize(null).then(result => {
+    //         console.log("LLM INITIALIZED");
 
-            console.log(Output);
+    //         console.log(Output);
             
-            LLM.Tune(req.body.job_description).then(result => {
-                console.log("LLM TUNED.");
+    //         LLM.Tune(req.body.job_description).then(result => {
+    //             console.log("LLM TUNED.");
     
-                console.log(Output);
-            });;
-        });
-    });
+    //             console.log(Output);
+    //         });;
+    //     });
+    // });
 
     res.end();
 });
