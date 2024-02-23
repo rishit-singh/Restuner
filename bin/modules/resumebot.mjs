@@ -15,10 +15,10 @@ export async function createResumeBot(_Model, onGenerateCallback = (tokens) => {
                 lastPromise = doc.getMetadata();
                 for (let i = 1; i <= numPages; i++) {
                     resumeBuffer += await doc.getPage(i)
-                        .then(page => page.getTextContent()
-                        .then(content => content.items.map(item => item)))
-                        .then(strs => strs.filter(str => str !== undefined).join(" "))
-                        .then(str => str);
+                        .then(page => page.getTextContent())
+                        .then(content => content.items.map(item => item))
+                        .then(strs => strs.filter(str => str !== undefined))
+                        .then(str => str.map(item => item.str).join(""));
                 }
             });
             this.ResumeBuffer = resumeBuffer;
@@ -39,7 +39,6 @@ export async function createResumeBot(_Model, onGenerateCallback = (tokens) => {
         async Tune(jobDescription) {
             const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
                 .Run());
-            console.log(`Prompt count: ${Bot.Messages.length}`);
             Bot.Save("prompts.txt");
             return results;
         },

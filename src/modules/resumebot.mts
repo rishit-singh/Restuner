@@ -1,6 +1,8 @@
 import {getDocument} from "pdfjs-dist";
 import { ReplicateBot, createReplicateBot, TokenCallback, Model, createMessage } from "./bot.mjs";
 import { UnsafeCast } from "../util.js";
+import { TextContent, TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api.js";
+import { ResultStream } from "@cloudflare/ai/dist/tools.js";
 
 export interface ResumeBot
 {
@@ -41,12 +43,12 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
 
                     for (let i = 1; i <= numPages; i++) {
                         resumeBuffer += await doc.getPage(i)
-                            .then(page => page.getTextContent()
-                            .then(content => content.items.map(item => item)))
-                            .then(strs => strs.filter(str => str !== undefined).join(" "))
-                            .then(str => str);
+                            .then(page => page.getTextContent())
+                            .then(content => content.items.map(item => item as TextItem ))
+                            .then(strs => strs.filter(str => str !== undefined))
+                            .then(str => str.map(item => item.str).join(""));
                         }
-                    });
+                });
 
             (this as ResumeBot).ResumeBuffer = resumeBuffer;
         },
@@ -77,8 +79,6 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
         {
             const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
                             .Run());
-
-            console.log(`Prompt count: ${Bot.Messages.length}`);
 
             Bot.Save("prompts.txt");  
 

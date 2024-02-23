@@ -9,7 +9,7 @@ async function main() {
     };
     const bot = await createResumeBot(model, (tokens) => { console.log(tokens); throw new Error(); });
     bot.Callback = (tokens) => process.stdout.write(UnsafeCast(tokens[0]));
-    bot.LoadResume(readFileSync(process.argv[2]).buffer);
+    await bot.LoadResume(readFileSync(process.argv[2]).buffer);
     try {
         bot.Initialize();
         bot.Tune(`As a Full Stack Developer at Krux you will make an impact by building a core component of our product that allows our customers to derive value and insight. You will work with a team that is self-motivated to solve problems, excited to learn and be challenged, and likes to have fun.

@@ -1,6 +1,6 @@
 You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided.
 [INST] Heres the resume 
-. Dont generate any info yet, wait for the job description. [/INST]
+Rishit Singh rsrishitsingh@gmail.com |  6723381435 |  Vancouver, BC |  https://github.com/rishit-singhEducationShalom Hills International School Gurugram, IndiaHIGH SCHOOL DIPLOMA IN SCIENCE April 2017 – August 2021GPA: 3.2Langara College Vancouver BCASSOCIATES OF SCIENCE IN COMPUTER SCIENCE Jan 2023 – Jan 2025GPA: 3.6ExperienceTextualization Software Vancouver BCSOFTWARE ENGINEER July 2023 – Present• Worked on optimizing CLucene, a C++ based search engine.Enablesoft ERP Gurugram, IndiaSOFTWARE ENGINEER October 2021 – June 2023• Made a web based AR engine from scratch using WebXR for previewing products from an e-commerce website.• Made a C# based service to dynamically generate mappable textures of rugs their images on the website.• Automated 3D model generation with the Blender API• Wrote ERP services in C#SkillsProgramming: C++, C#, Java, Kotlin, Python, Go, JavaScriptGraphics APIs and Game Engines: OpenGL, SDL, Vulkan, Unity, Godot, Three.js, WebGLDev Ops: Bash/Linux, Docker, Docker-ComposeWeb Backend: ASP.NET Core, DjangoWeb Frontend: HTML/CSS, ReactMath: Linear algebra, Calculus, StatisticsProjectsCacoEngine C++, SDLSDL BASED GAME ENGINE WRITTEN IN C++ https://github.com/rishit-singh/CacoEngineGLEngine C++, OpenGLOPENGL BASED GRAPHICS ENGINE WRITTEN IN C++ https://github.com/rishit-singh/GLEngineWebAR-Abstraction TypeScript, WebXR, Three.jsA WEB BASED GENERAL PURPOSE AR ENGINE. https://github.com/rishit-singh/WebAR-AbstractionRugTextureGenerator C#, OpenCVA C# BASED SERVICE TO DYNAMICALLY GENERATE MAPPABLE TEXTURES FROM IMAGES OF RUGS. https://github.com/Enablesoft-ERP/RugTextureGeneratorRugViewAR-MeshGen Python, Blender APIBLENDER SCRIPTS TO GENERATE 3D MODELS FOR RUGS. https://github.com/Enablesoft-ERP/RugViewAR-MeshGenOpenDatabaseAPI C#API FOR CREATING AND MAINTAINING SQL BASED DATABASE PROGRAMMATICALLY. https://github.com/rishit-singh/OpenDatabaseAPISharpSession C#A C# BASED WEB SESSION MANAGER https://github.com/rishit-singh/SharpSessionCourseView C#, Blazor.NET, PostGRESQLA WEB FRONTEND WITH SEARCH QUERIES FOR A FAST DATABASE CONTAINING INFO ABOUT ALL COURSESOFFERED AT LANGARA IN UPCOMING AND PREVIOUS TERMS. https://github.com/langaracpsc/CourseViewKeyMan C#A GENERAL PURPOSE API KEY MANAGER. https://github.com/rishit-singh/KeyManlangaracpsc-next Typescript, Next.jsWEBSITE FOR LANGARA CS CLUB. https://langaracs.techperegrine-gpt Python, OpenAI APIA PROMPT TUNED GPT BASED CHATBOT FOR LANGARA CS CLUB. https://github.com/langaracpsc/peregrine-gpt. Dont generate any info yet, wait for the job description. [/INST]
 [INST] Tune and recreate this resume to match this As a Full Stack Developer at Krux you will make an impact by building a core component of our product that allows our customers to derive value and insight. You will work with a team that is self-motivated to solve problems, excited to learn and be challenged, and likes to have fun.
  
         Who are we?
@@ -39,46 +39,33 @@ You are a resume analyzer. I will provide you a resume in form of text and then 
         Strong attention to detail, critical thinking, and problem-solving skills.
         Ability to collaborate and operate in an agile environment.
         . [/INST]
-**Full Stack Developer Resume**
 
-*As a Full Stack Developer at Krux, you will build a core component of our product that allows customers to derive value and insight. You will work with a self-motivated team that is excited to learn, be challenged, and likes to have fun. The team is committed to understanding customer needs and solving their problems, making Krux a leading SAAS solution provider for the mining industry.*
+Rishit Singh  [rsrishitsingh@gmail.com](mailto:rsrishitsingh@gmail.com) |  6723381435 |  Vancouver, BC |  <https://github.com/rishit-singh>
 
-**Technical Skills**
-
-- Develop attractive and highly usable applications with a focus on performance, security, and scalability using:
-  - Angular 4+, .NET, C#, ASP.NET MVC, JavaScript, jQuery, CSS, Bootstrap
-  - Web Development
-  - .NET Core API development
-  - Database Development using Microsoft SQL, T-SQL
-  - Unit and integration tests
-  - Microsoft Azure PAAS environment
-  - Experience with dev tools including Git, Azure DevOps, Visual Studio, Jira.
-
-**Professional Experience**
-
-- Full Stack Developer or similar role with 7+ years of experience.
+**Objective:**
+To obtain a Full Stack Developer position at Krux to build innovative SAAS solutions and contribute to real-time data management and analytics.
 
 **Education**
 
-- Post-secondary training in computer science or software development.
+* Shalom Hills International School, Gurugram, India | HIGH SCHOOL DIPLOMA IN SCIENCE | April 2017 – August 2021 | GPA: 3.2
+* Langara College, Vancouver, BC | ASSOCIATES OF SCIENCE IN COMPUTER SCIENCE | Jan 2023 – Jan 2025 | GPA: 3.6
 
-**Personal Attributes**
+**Experience**
 
-- Passionate about building software.
-- Embrace new technology and eager to expand skills.
-- Love being challenged to solve new problems.
-- Self-starter who thrives in a fast-paced environment.
-- Team player, always ready to help out a co-worker.
-- Champion for code review and automated testing.
-- Excellent written and verbal communication skills.
-- Strong attention to detail, critical thinking, and problem-solving skills.
-- Ability to collaborate and operate in an agile environment.
+* Textualization Software, Vancouver, BC | SOFTWARE ENGINEER | July 2023 – Present
+	+ Optimized CLucene, a C++ based search engine.
+* Enablesoft ERP, Gurugram, India | SOFTWARE ENGINEER | October 2021 – June 2023
+	+ Developed a web-based AR engine using WebXR for previewing products from an e-commerce website.
+	+ Created a C# based service to dynamically generate mappable textures of rugs for the website.
+	+ Automated 3D model generation with the Blender API.
+	+ Wrote ERP services in C#.
 
-**Relevance to Krux Full Stack Developer Position**
+**Skills**
 
-- Technical skills10/10
-- Professional experience: 9/10
-- Education8/10
-- Personal attributes/10
-
-The candidate's resume is highly relevant to the Krux Full Stack Developer position, with a strong emphasis on technical skills, professional experience, and personal attributes that align with the job requirements. The education section meets the minimum requirement of post-secondary training in computer science or software development. Overall, the{}
+* Programming++, C#, Java, Kotlin, Python, Go, JavaScript
+* Web Development: Angular 4+, .NET, C#, ASP.NET MVC, JavaScript, jQuery, CSS, Bootstrap
+* Database Development: Microsoft SQL, T-SQL
+* Dev Ops: Git, Azure DevOps, Visual Studio, Jira
+* Testing and integration tests
+* Cloud Azure PAAS environment
+* Other: Bash/Linux, Docker, Docker-Compose, OpenGL, SDL,{}
