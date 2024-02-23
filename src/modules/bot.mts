@@ -191,11 +191,13 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
                     {
                         Results.push([]);
 
+                        console.log(`\nPROMPT: ${PromptString}\n`);
+
                         for await (const event of ReplicateInstance.stream(`${Model.Owner}/${Model.Name}`, { input: {prompt: PromptString} }))         
                         {
-                            OnGenerateCallback([event.data.toString()]);  
+                            OnGenerateCallback([event.data]);  
 
-                            Results[Results.length - 1].push(event.data.toString());
+                            Results[Results.length - 1].push(event.data);
                         }
 
                         PromptString += `${Results[Results.length - 1].join("")}\n`;

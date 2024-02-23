@@ -18,15 +18,14 @@ async function main(): Promise<void>
     
     const bot: ResumeBot = await createResumeBot(model, (tokens: string[]) => { console.log(tokens); throw new Error();});
 
-    bot.Callback = (tokens) => process.stdout.write(UnsafeCast<string>(tokens[0]));  
+    bot.Callback = (tokens) => process.stdout.write(UnsafeCast<string>(tokens[0].toString()));  
 
     await bot.LoadResume(readFileSync(process.argv[2]).buffer);
 
     try 
     {
         bot.Initialize();
-        bot.Tune(`
-        `); 
+        bot.Tune(``); 
     }
     catch (e)
     {

@@ -8,7 +8,7 @@ async function main() {
         Name: "mixtral-8x7b-instruct-v0.1"
     };
     const bot = await createResumeBot(model, (tokens) => { console.log(tokens); throw new Error(); });
-    bot.Callback = (tokens) => process.stdout.write(UnsafeCast(tokens[0]));
+    bot.Callback = (tokens) => process.stdout.write(UnsafeCast(tokens[0].toString()));
     await bot.LoadResume(readFileSync(process.argv[2]).buffer);
     try {
         bot.Initialize();

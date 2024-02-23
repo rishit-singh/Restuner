@@ -38,7 +38,7 @@ export async function createResumeBot(_Model, onGenerateCallback = (tokens) => {
         },
         async Tune(jobDescription) {
             const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
-                .Run());
+                .Run(this.Model, true));
             Bot.Save("prompts.txt");
             return results;
         },
@@ -46,8 +46,8 @@ export async function createResumeBot(_Model, onGenerateCallback = (tokens) => {
             return (await Bot.Prompt(prompt).Run());
         },
         async Initialize() {
-            return await Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided."),
-                createMessage("user", `Heres the resume \n${this.ResumeBuffer}. Dont generate any info yet, wait for the job description.`)]);
+            return await Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Generate the resume in markdown."),
+                createMessage("user", `Heres the resume \n${this.ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
         },
         ResumeBuffer: resumeBuffer,
     };
