@@ -16,6 +16,10 @@ yarn install; # install the required dependencies
 yarn build && yarn serve; # build the library and run the API
 ```
 
+**Configuration**
+```bash
+export REPLICATE_API_TOKEN=<YOUR REPLICATE API TOKEN>
+```
 
 **API Reference**
 
