@@ -9,11 +9,9 @@ import { Model } from "../modules/bot.mjs";
 const app = express();
 const upload = multer();
 
-const port = 3000;
+const port = 8000;
 
 let Output :string[] = []; 
-
-// const LLM = await ResumeBot({Owner: "", Name: ""});
 
 app.use(cors());
 app.use(express.json());
