@@ -6,7 +6,6 @@ import { createMessage, Message } from "./modules/bot.mjs";
 import { UnsafeCast } from "./util.js";
 import { readFile } from "fs/promises";
 
-
 async function main(): Promise<void> 
 {
     let model: Model;

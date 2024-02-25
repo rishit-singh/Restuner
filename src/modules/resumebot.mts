@@ -20,6 +20,8 @@ export interface ResumeBot
 
     State: ResumeBotState,
 
+    Bot: ReplicateBot, 
+
     Callback: TokenCallback,
 
     Tune: (tokens: string) => void,
@@ -31,7 +33,7 @@ export interface ResumeBot
 
 export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { }) : Promise<ResumeBot>
 {
-    const Bot = await createReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
+    const _Bot = await createReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
    
     let OnGenerateCallback: TokenCallback = onGenerateCallback;
 
@@ -82,35 +84,40 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
             return OnGenerateCallback;
         },
 
+        get Bot(): ReplicateBot
+        {
+            return _Bot;
+        },
+
         set Callback(callback)
         {
             OnGenerateCallback = callback;
 
-            Bot.Callback = OnGenerateCallback;
+            _Bot.Callback = OnGenerateCallback;
         },
         
         async Tune(jobDescription: string)
         {
             _State = ResumeBotState.Tuning;
 
-            const results = (await Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
+            const results = (await _Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
                             .Run((this as ResumeBot).Model, true));
 
-            Bot.Save("prompts.txt");  
+            _Bot.Save("prompts.txt");  
 
             return results;
         },
         
         async Prompt(prompt: string)
         {
-            return (await Bot.Prompt(prompt).Run());
+            return (await _Bot.Prompt(prompt).Run());
         },
 
         async Initialize()
         {  
             _State = ResumeBotState.Setup;
 
-            return await Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Generate the resume in markdown."),
+            return await _Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Generate the resume in markdown."),
                                     createMessage("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
         },
         

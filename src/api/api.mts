@@ -1,5 +1,5 @@
 import express from "express";
-import { ResumeBot } from "../modules/resumebot.mjs";
+import { ResumeBot, createResumeBot } from "../modules/resumebot.mjs";
 import { readFileSync } from "fs";
 import cors from "cors";
 import multer from "multer";
@@ -20,43 +20,38 @@ app.use(express.json());
 
 type File = Express.Multer.File; 
 
-app.post("/", upload.array("resume"), async (req, res) => {
-    // LLM.Callback = ((tokens) => {
-    //     const joined = tokens.join("");
-        
-    //     if (Output.indexOf(joined) == -1)
-    //             Output.push(joined);
+let LLM: ResumeBot; 
 
-    //     console.log(`\n${joined}\n`);
-        
-    //     res.write(Output[Output.length - 1]);
-    // });    
-    
-    // LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer).then(result => {
-    //     console.log("RESUME LOADED");
+let output: string = "";
 
-    //     console.log(Output);
+async function Main()
+{
+    LLM = await createResumeBot({
+        Owner: "mistralai",
+        Name: "mixtral-8x7b-instruct-v0.1"
+    }, tokens => { output = LLM.Bot.Results[LLM.Bot.Results.length - 1].join(""); });  
 
-    //     LLM.Initialize(null).then(result => {
-    //         console.log("LLM INITIALIZED");
+    app.post("/upload", upload.array("resume"), async (req, res) => {
+        await LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer);
+        await LLM.Initialize();
 
-    //         console.log(Output);
-            
-    //         LLM.Tune(req.body.job_description).then(result => {
-    //             console.log("LLM TUNED.");
-    
-    //             console.log(Output);
-    //         });;
-    //     });
-    // });
+        console.log("Reached here");
 
-    res.end();
-});
+        await LLM.Tune(req.body.job_description);
 
-app.get("/output/", (req, res, id) => {
-    res.send(Output[Output.length - 1]); 
-});
+        res.send({State: LLM.State});
+    });
 
-app.listen(port, () => {
-    console.log(`Listening on port ${port}`); 
-});
+    app.get("/output", (req, res, id) => {
+        const results: string[] = LLM.Bot.Results[LLM.Bot.Results.length - 1]; 
+
+        res.send({ State: LLM.State, Output: (results !== undefined) ? results.join("") : ""});
+    });
+
+    app.listen(port, () => {
+        console.log("Model:", LLM.Model);
+        console.log(`Listening on port ${port}`);
+    });
+}
+
+Main();
