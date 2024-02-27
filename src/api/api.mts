@@ -9,9 +9,9 @@ import { Model } from "../modules/bot.mjs";
 const app = express();
 const upload = multer();
 
-const port = 8000;
+const port = 8001;
 
-let Output :string[] = []; 
+let Output: string[] = []; 
 
 app.use(cors());
 app.use(express.json());

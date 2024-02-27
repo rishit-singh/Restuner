@@ -100,7 +100,7 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
         {
             _State = ResumeBotState.Tuning;
 
-            const results = (await _Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}.`)
+            const results = (await _Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
                             .Run((this as ResumeBot).Model, true));
 
             _Bot.Save("prompts.txt");  
@@ -117,7 +117,7 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
         {  
             _State = ResumeBotState.Setup;
 
-            return await _Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume. Compare the resume to the job description and give each part of it a score on how relevant it is for the job. Only generate the info when the resume is provided. Generate the resume in markdown."),
+            return await _Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
                                     createMessage("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
         },
         

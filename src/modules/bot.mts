@@ -5,20 +5,22 @@ import Replicate from "replicate";
 import { waitForDebugger } from "inspector";
 import { version } from "os";
 
-export interface Message {
-    Role: string,
-    Content: string,
+export class Message 
+{
+    public Role: string;
 
-    toString: () => string
-}
+    public Content: string;
 
-export function createMessage(role: string, content: string): Message {
-    return {
-        Role: role,
-        Content: content,
+    toString(): string 
+    {
+        return (this.Role == "user") ? `[INST] ${this.Content} [/INST]` : this.Content;
+    }
 
-        toString: () => (role == "user") ? `[INST] ${content} [/INST]` : content
-    };
+    constructor(role: string, content: string)
+    {
+        this.Role = role;
+        this.Content = content;
+    }
 }
 
 export type TokenCallback = (tokens: string[]) => void;
@@ -218,7 +220,7 @@ export async function createReplicateBot(Model: Model, ApiKey: string, EndToken 
         {
             let messageObj;
            
-            MessageQueue.push(messageObj = createMessage(role, message));
+            MessageQueue.push(messageObj = new Message(role, message));
 
             return  (this as ReplicateBot); 
         },
