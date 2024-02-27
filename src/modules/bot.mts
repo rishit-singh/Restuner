@@ -34,211 +34,189 @@ export enum BotState
     Idle
 } 
 
-export interface ReplicateBot
+export class ReplicateBot
 {
-    Version: string,
-    Model: Model,
-    ApiKey: string,
-    PromptString: string,
-    MessageQueue: Message[],
-    Messages: Message[],
-    Results: string[][],
-    EndToken: string,    
-    State: BotState,
+    public Version: string;
 
-    Setup: (setupPrompts?: Message[], stream?: boolean) => Promise<boolean>; 
+    public Model: Model;
 
-    Result: () => string[],
-    
-    PollResult: (url: string, maxTokens?: number) => Promise<string[]> 
+    public ApiKey: string;
 
-    Callback: TokenCallback,
+    public MessageQueue: Message[];
 
-    Run: (model?: Model, stream?: boolean) => Promise<ReplicateBot>,
+    public Messages: Message[];
 
-    Prompt: (message: string, role?: string) => ReplicateBot,
+    public Results: string[][];
 
-    Save: (path: string) => void,
+    public EndToken: string;
 
-    toString(): string
-}
+    private OnGenerateCallback: TokenCallback;
 
-export async function createReplicateBot(Model: Model, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
-    : Promise<ReplicateBot>
-{   
-    const MessageQueue: Message[] = [];
- 
-    const Messages: Message[] = [];
+    private _State: BotState;
 
-    const Results: string[][] = [];
+    private _PromptString: string;
 
-    let PromptString = "";
+    private ReplicateInstance: Replicate;
 
-    let _State: BotState = BotState.Idle;
+    public constructor(Model: Model, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
+    {
+        this.Version = "";
+        this.Model = Model;
+        this.ApiKey = ApiKey;
+        this.EndToken = EndToken; 
+        this.MessageQueue = [];
+        this.Messages = [];
+        this.Results = [];
 
-    let OnGenerateCallback: TokenCallback = onGenerateCallback;
+        this._PromptString = "";
 
-    let JobManager;
+        this.OnGenerateCallback = onGenerateCallback;
 
-    let EventSources: EventSource[] = [];
-
-    const ReplicateInstance = new Replicate({
-        auth: process.env.REPLICATE_API_TOKEN
-    });  
-
-    let Version: string = (await ReplicateInstance.models.get(Model.Owner, Model.Name)).latest_version?.id as string;
-    
-    return { 
-        Version,
-        Model,
-        ApiKey,
-        MessageQueue,
-        Messages,
-        Results,
-        EndToken, 
-
-        get State(): BotState
-        {
-            return _State;
-        },
-
-        get PromptString(): string 
-        { 
-            return PromptString; 
-        },
-
-        async Setup(setupPrompts: Message[] = [], stream: boolean = false): Promise<boolean>
-        {   
-            setupPrompts.forEach(prompt => MessageQueue.push(prompt));
-            
-            try
-            {
-                _State = BotState.Setup;
-
-                await (this as ReplicateBot).Run(Model, stream); 
-            }
-            catch (e)
-            {
-                console.log(`Error occurred during setup: ${e}` );
-                return false;
-            }
-
-            return true; 
-        },
-
-        Result: () => Results.map(result => {
-            const joined = result.join("");
-            
-            return joined.substring(0, joined.search(EndToken));
-        }),
+        this.ReplicateInstance = new Replicate({
+            auth: this.ApiKey
+        }); 
+         
+        this._State = BotState.Idle;
         
-        async PollResult(url: string, maxTokens = 1000): Promise<string[]>
+    }
+
+    async Initialize()
+    {
+        this.Version = (await this.ReplicateInstance.models.get(this.Model.Owner, this.Model.Name)).latest_version?.id as string;
+    }
+    
+    get State(): BotState {
+        return this._State;
+    }
+
+    get PromptString(): string {
+        return this._PromptString;
+    }
+ 
+    async Setup(setupPrompts: Message[] = [], stream: boolean = false): Promise<boolean> {
+        setupPrompts.forEach(prompt => this.MessageQueue.push(prompt));
+
+        try {
+            this._State = BotState.Setup;
+
+            await this.Run(this.Model, stream);
+        }
+        catch (e) {
+            console.log(`Error occurred during setup: ${e}`);
+            return false;
+        }
+
+        return true;
+    }
+
+    Result(): string
+    {
+        return this.Results.map(result => {
+            const joined = result.join("");
+        
+            return joined.substring(0, joined.search(this.EndToken));
+        }).join("");
+    }
+        
+    async PollResult(url: string, maxTokens: number = 1000): Promise<string[]>
+    {
+        let output: string[] | null = null;
+
+        while (output == null) {
+            let response = await ((await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` }
+            })).json()) as any;
+
+            if (response.output !== undefined) {
+                let outputSpread = [...response.output];
+
+                for (let x = 0; outputSpread.join("").search(this.EndToken) == -1; x++) {
+                    output = outputSpread;
+
+                    response = await ((await fetch(url, {
+                        method: "GET",
+                        headers: { Authorization: `Token ${this.ApiKey}` }
+                    })).json());
+
+                    if (response.output === undefined)
+                        break;
+
+                    outputSpread = [...response.output];
+
+                    this.OnGenerateCallback(outputSpread);
+                }
+            }
+        }
+
+        return output;
+    }
+        
+    async Run(model: Model = this.Model, stream: boolean = true): Promise<ReplicateBot>
+    {
+        try 
         {
-            let output: string[] | null = null;
+            while (this.MessageQueue.length > 0) {
+                const message: Message = this.MessageQueue.shift() as Message;
 
-            while (output == null) 
-            {
-                let response = await ((await fetch(url, {
-                    method: "GET",
-                    headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` }
-                })).json()) as any;
+                this._PromptString += `${message.toString().trim()}\n`;
 
-                if (response.output !== undefined) 
-                {
-                    let outputSpread = [...response.output];
+                if (!stream) {
+                    if (message.Role != "system") {
+                        this.Results.push([(await this.PollResult((await this.ReplicateInstance.predictions.create({ version: this.Version, model: `${this.Model.Owner}/${this.Model.Name}`, input: { prompt: this._PromptString } })).urls.get as string))
+                            .filter(token => token !== undefined)
+                            .map(token => token.toString())
+                            .join("")]);
 
-                    for (let x = 0; outputSpread.join("").search(EndToken) == -1; x++) {
-                        output = outputSpread;
-
-                        response = await ((await fetch(url, {
-                            method: "GET",
-                            headers: { Authorization: `Token ${ApiKey}` }
-                        })).json());
-
-                        if (response.output === undefined)
-                            break;
-
-                        outputSpread = [...response.output];
-
-                        OnGenerateCallback(outputSpread);
+                        this._PromptString += `${this.Results[this.Results.length - 1].join("").trim()}\n`;
                     }
+                }
+                else {
+                    this.Results.push([]);
+
+                    console.log(`\nPROMPT: ${this._PromptString}\n`);
+
+                    for await (const event of this.ReplicateInstance.stream(`${this.Model.Owner}/${this.Model.Name}`, { input: { prompt: this.PromptString } })) {
+                        this.OnGenerateCallback([event.data]);
+
+                        this.Results[this.Results.length - 1].push(event.data);
+                    }
+
+                    this._PromptString += `${this.Results[this.Results.length - 1].join("")}\n`;
                 }
             }
 
-            return output;
-        },
-        
-        async Run(model: Model = Model, stream: boolean = true): Promise<ReplicateBot>
-        { 
-            try
-            {  
-                while (MessageQueue.length > 0)
-                { 
-                    const message: Message = MessageQueue.shift() as Message;
-
-                    PromptString += `${message.toString().trim()}\n`;
-
-                    if (!stream)
-                    {
-                        if (message.Role != "system") {
-                            Results.push([(await (this as ReplicateBot).PollResult((await ReplicateInstance.predictions.create({version: Version, model: `${Model.Owner}/${Model.Name}`, input: {prompt:  PromptString}})).urls.get as string))
-                                .filter(token => token !== undefined)
-                                .map(token => token.toString())
-                                .join("")]);
-
-                            PromptString += `${Results[Results.length - 1].join("").trim()}\n`;
-                        }
-                    }
-                    else
-                    {
-                        Results.push([]);
-
-                        console.log(`\nPROMPT: ${PromptString}\n`);
-
-                        for await (const event of ReplicateInstance.stream(`${Model.Owner}/${Model.Name}`, { input: {prompt: PromptString} }))         
-                        {
-                            OnGenerateCallback([event.data]);  
-
-                            Results[Results.length - 1].push(event.data);
-                        }
-
-                        PromptString += `${Results[Results.length - 1].join("")}\n`;
-                    }
-                }   
-                
-                console.log("END");
-            }
-            catch (e) 
-            {
-                console.error(e);
-            }
-
-            return this;
-        },
-
-        Prompt(message: string, role = "user"): ReplicateBot
-        {
-            let messageObj;
-           
-            MessageQueue.push(messageObj = new Message(role, message));
-
-            return  (this as ReplicateBot); 
-        },
-
-        Save(path: string)
-        {
-            writeFile(path,  (this as ReplicateBot).PromptString, err => console.log(err));
-        },
-
-        get Callback()
-        {
-            return OnGenerateCallback;
-        },
-
-        set Callback(callback)
-        {
-            OnGenerateCallback = callback;
+            console.log("END");
         }
-    };
-} 
+        catch (e) {
+            console.error(e);
+        }
+
+        return this;
+    }
+
+    Prompt(message: string, role = "user"): ReplicateBot
+    {
+        let messageObj;
+
+        this.MessageQueue.push(messageObj = new Message(role, message));
+
+        return this;
+    }
+
+    Save(path: string)
+    {
+        writeFile(path, (this as ReplicateBot).PromptString, err => console.log(err));
+    }
+
+    get Callback()
+    {
+        return this.OnGenerateCallback;
+    }
+
+    set Callback(callback)
+    {
+        this.OnGenerateCallback = callback;
+    }
+}
 

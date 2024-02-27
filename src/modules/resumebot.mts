@@ -1,5 +1,5 @@
 import {getDocument} from "pdfjs-dist";
-import { ReplicateBot, createReplicateBot, TokenCallback, Model, createMessage } from "./bot.mjs";
+import { ReplicateBot, TokenCallback, Model, Message } from "./bot.mjs";
 import { UnsafeCast } from "../util.js";
 import { TextContent, TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api.js";
 
@@ -33,8 +33,10 @@ export interface ResumeBot
 
 export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { }) : Promise<ResumeBot>
 {
-    const _Bot = await createReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
+    const _Bot = new ReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
    
+    await _Bot.Initialize();
+
     let OnGenerateCallback: TokenCallback = onGenerateCallback;
 
     let resumeBuffer: string = "";
@@ -117,8 +119,8 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
         {  
             _State = ResumeBotState.Setup;
 
-            return await _Bot.Setup([createMessage("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
-                                    createMessage("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
+            return await _Bot.Setup([new Message("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
+                                    new Message("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
         },
         
         ResumeBuffer: resumeBuffer,
