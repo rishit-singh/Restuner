@@ -1,31 +1,36 @@
 import { writeFile } from "fs";
 import fetch from "node-fetch";
-import EventSource, { EventSourceInitDict } from "eventsource";
 import Replicate from "replicate";
-import { waitForDebugger } from "inspector";
-import { version } from "os";
 
+/**
+ * Represents a prompt message 
+ */
 export class Message 
 {
-    public Role: string;
+    public Role: string; // Message role
 
-    public Content: string;
+    public Content: string; // Message content
 
+    /**
+     *  Generates a string representing the current Message instance
+     * @returns 
+     */
     toString(): string 
     {
         return (this.Role == "user") ? `[INST] ${this.Content} [/INST]` : this.Content;
     }
 
+    /**
+     * Constructor 
+     * @param role Role to set 
+     * @param content Content to set
+     */
     constructor(role: string, content: string)
     {
         this.Role = role;
         this.Content = content;
     }
 }
-
-export type TokenCallback = (tokens: string[]) => void;
-
-export type Model = { Owner: string, Name: string };
 
 export enum BotState
 {
@@ -34,30 +39,44 @@ export enum BotState
     Idle
 } 
 
+export type TokenCallback = (tokens: string[]) => void;
+
+export type Model = { Owner: string, Name: string };
+
+/**
+ * Abstraction of Replicate sdk instance with routines to support prompting in a more controlled manner 
+ */
 export class ReplicateBot
 {
-    public Version: string;
+    public Model: Model; // Model to use
 
-    public Model: Model;
+    public Version: string; // Model version
 
-    public ApiKey: string;
+    public ApiKey: string; // Replicate API key
 
-    public MessageQueue: Message[];
+    public MessageQueue: Message[]; // Message queue
 
-    public Messages: Message[];
+    public Messages: Message[]; // Stack of all messages generated during prompting
 
-    public Results: string[][];
+    public Results: string[][]; // Messages in form of strings generated during prompting
 
-    public EndToken: string;
+    public EndToken: string; // End token to seek while polling syncronously
 
-    private OnGenerateCallback: TokenCallback;
+    private OnGenerateCallback: TokenCallback; // Callback to be called on every token generation
 
-    private _State: BotState;
+    private _State: BotState; // Bot state
 
-    private _PromptString: string;
+    private _PromptString: string; // Combination of all Result strings in Replicate's prompt conversation format
 
-    private ReplicateInstance: Replicate;
+    private ReplicateInstance: Replicate; // Replicate sdk instance
 
+    /**
+     * Constructor 
+     * @param Model Model to use 
+     * @param ApiKey Replicate API key
+     * @param EndToken End token to set
+     * @param onGenerateCallback Callback to set
+     */
     public constructor(Model: Model, ApiKey: string, EndToken = "RREND", onGenerateCallback: TokenCallback = (tokens: string[]) => {})
     {
         this.Version = "";
@@ -80,19 +99,50 @@ export class ReplicateBot
         
     }
 
+    /**
+     * Selects the latest version of the selected model  
+     */
     async Initialize()
     {
         this.Version = (await this.ReplicateInstance.models.get(this.Model.Owner, this.Model.Name)).latest_version?.id as string;
     }
-    
+   
+    /**
+     * State getter
+     */
     get State(): BotState {
         return this._State;
     }
 
+    /**
+     * PromptString getter
+     */
     get PromptString(): string {
         return this._PromptString;
     }
- 
+    
+    /**
+     * Callback getter 
+     */
+    get Callback()
+    {
+        return this.OnGenerateCallback;
+    }
+
+    /**
+     * Callbacl setter  
+     */
+    set Callback(callback)
+    {
+        this.OnGenerateCallback = callback;
+    }
+
+    /**
+     * Runs the provided prompts before the actual prompting chain starts. 
+     * @param setupPrompts Prompts to run 
+     * @param stream Stream flag 
+     * @returns Execution state
+     */
     async Setup(setupPrompts: Message[] = [], stream: boolean = false): Promise<boolean> {
         setupPrompts.forEach(prompt => this.MessageQueue.push(prompt));
 
@@ -109,6 +159,10 @@ export class ReplicateBot
         return true;
     }
 
+    /**
+     * Combines the Result strings into one
+     * @returns Combined result strings 
+     */
     Result(): string
     {
         return this.Results.map(result => {
@@ -117,7 +171,13 @@ export class ReplicateBot
             return joined.substring(0, joined.search(this.EndToken));
         }).join("");
     }
-        
+      
+    /**
+     * Polls for generated tokens synchornously without streaming
+     * @param url URL to fetch from 
+     * @param maxTokens Max tokens
+     * @returns Results 
+     */
     async PollResult(url: string, maxTokens: number = 1000): Promise<string[]>
     {
         let output: string[] | null = null;
@@ -152,6 +212,12 @@ export class ReplicateBot
         return output;
     }
         
+    /**
+     * Runs the all the prompts synchronously and polls the results 
+     * @param model Model to use
+     * @param stream Stream flag to specify if to stream while polling or not
+     * @returns Bot instance 
+     */
     async Run(model: Model = this.Model, stream: boolean = true): Promise<ReplicateBot>
     {
         try 
@@ -162,7 +228,7 @@ export class ReplicateBot
                 this._PromptString += `${message.toString().trim()}\n`;
 
                 if (!stream) {
-                    if (message.Role != "system") {
+                    if (message.Role != "system") { // Poll for messages that are not system 
                         this.Results.push([(await this.PollResult((await this.ReplicateInstance.predictions.create({ version: this.Version, model: `${this.Model.Owner}/${this.Model.Name}`, input: { prompt: this._PromptString } })).urls.get as string))
                             .filter(token => token !== undefined)
                             .map(token => token.toString())
@@ -171,7 +237,7 @@ export class ReplicateBot
                         this._PromptString += `${this.Results[this.Results.length - 1].join("").trim()}\n`;
                     }
                 }
-                else {
+                else { // asynchornously consume the stream of generated tokens
                     this.Results.push([]);
 
                     console.log(`\nPROMPT: ${this._PromptString}\n`);
@@ -186,7 +252,6 @@ export class ReplicateBot
                 }
             }
 
-            console.log("END");
         }
         catch (e) {
             console.error(e);
@@ -195,6 +260,12 @@ export class ReplicateBot
         return this;
     }
 
+    /**
+     * Adds a message to the MessageQueue
+     * @param message Message content 
+     * @param role Message role
+     * @returns Current ReplicateBot instance 
+     */
     Prompt(message: string, role = "user"): ReplicateBot
     {
         let messageObj;
@@ -204,19 +275,13 @@ export class ReplicateBot
         return this;
     }
 
+    /**
+     * Saves the PromptString in its current state to the specified file
+     * @param path 
+     */
     Save(path: string)
     {
         writeFile(path, (this as ReplicateBot).PromptString, err => console.log(err));
-    }
-
-    get Callback()
-    {
-        return this.OnGenerateCallback;
-    }
-
-    set Callback(callback)
-    {
-        this.OnGenerateCallback = callback;
     }
 }
 
