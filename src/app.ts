@@ -1,8 +1,8 @@
 import { readFileSync } from "fs";
-import { ReplicateBot, createReplicateBot } from "./modules/bot.mjs";
-import { createResumeBot, ResumeBot } from "./modules/resumebot.mjs";
+import { ReplicateBot } from "./modules/bot.mjs";
+import { ResumeBot } from "./modules/resumebot.mjs";
 import { Model } from "./modules/bot.mjs";
-import { createMessage, Message } from "./modules/bot.mjs";
+import { Message } from "./modules/bot.mjs";
 import { UnsafeCast } from "./util.js";
 import { readFile } from "fs/promises";
 
@@ -15,9 +15,7 @@ async function main(): Promise<void>
         Name: "mixtral-8x7b-instruct-v0.1"
     };
     
-    const bot: ResumeBot = await createResumeBot(model, (tokens: string[]) => { console.log(tokens); throw new Error();});
-
-    bot.Callback = (tokens) => process.stdout.write(UnsafeCast<string>(tokens[0].toString()));  
+    const bot: ResumeBot = await new ResumeBot(model, process.env.REPLICATE_API_TOKEN as string, (tokens: string[]) => { if (tokens !== undefined) process.stdout.write(tokens.join("")); });
 
     await bot.LoadResume(readFileSync(process.argv[2]).buffer);
 

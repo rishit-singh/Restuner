@@ -1,7 +1,7 @@
 import {getDocument} from "pdfjs-dist";
 import { ReplicateBot, TokenCallback, Model, Message } from "./bot.mjs";
 import { UnsafeCast } from "../util.js";
-import { TextContent, TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api.js";
+import { TextItem } from "pdfjs-dist/types/src/display/api.js";
 
 export enum ResumeBotState
 {
@@ -10,41 +10,29 @@ export enum ResumeBotState
     Idle
 }
 
-export interface ResumeBot
+export class ResumeBot
 {
-    LoadResume: (buffer: ArrayBuffer) => void,
-
-    Model: Model,
-
-    ResumeBuffer: string,
-
-    State: ResumeBotState,
-
-    Bot: ReplicateBot, 
-
-    Callback: TokenCallback,
-
-    Tune: (tokens: string) => void,
-
-    Prompt: (prompt: string) => void,
+    _ResumeBuffer: string;
     
-    Initialize: () => void
-}
+    _State: ResumeBotState; 
 
-export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCallback = (tokens: string[]) => { }) : Promise<ResumeBot>
-{
-    const _Bot = new ReplicateBot(_Model, process.env.REPLICATE_API_TOKEN as string);
-   
-    await _Bot.Initialize();
+    _Model: Model;
 
-    let OnGenerateCallback: TokenCallback = onGenerateCallback;
+    _Bot: ReplicateBot;
 
-    let resumeBuffer: string = "";
-    
-    let _State: ResumeBotState = ResumeBotState.Idle; 
+    constructor(model: Model, apiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
+    {
+        this._State = ResumeBotState.Idle;
+        this._Model = model;
+        
+        this._ResumeBuffer = "";
 
-    return {
-         async LoadResume(buffer: ArrayBuffer) {
+        this._Bot = new ReplicateBot(this._Model, apiKey, "RREND", onGenerateCallback); 
+    }
+
+    async LoadResume(buffer: ArrayBuffer) {
+        let resumeBuffer: string = "";
+
             const pdf = await getDocument(buffer as Uint8Array); 
             
             await pdf.promise
@@ -63,66 +51,61 @@ export async function createResumeBot(_Model: Model, onGenerateCallback: TokenCa
                         }
                 });
 
-            (this as ResumeBot).ResumeBuffer = resumeBuffer;
-        },
+            this._ResumeBuffer = resumeBuffer;
+        }
 
         set Model(model)
         {
-            _Model = model;
-        },
+            this._Model = model;
+        }
  
         get Model(): Model
         {
-            return _Model;
-        },
+            return this._Model;
+        }
 
         get State(): ResumeBotState
         {
-            return _State;
-        },
+            return this._State;
+        }
         
-        get Callback(): TokenCallback
-        {
-            return OnGenerateCallback;
-        },
-
         get Bot(): ReplicateBot
         {
-            return _Bot;
-        },
-
-        set Callback(callback)
+            return this._Bot;
+        }
+        
+        get ResumeBuffer()
         {
-            OnGenerateCallback = callback;
-
-            _Bot.Callback = OnGenerateCallback;
-        },
+            return this._ResumeBuffer;
+        }
         
         async Tune(jobDescription: string)
         {
-            _State = ResumeBotState.Tuning;
+            this._State = ResumeBotState.Tuning;
 
-            const results = (await _Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
+            const results = (await this._Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
                             .Run((this as ResumeBot).Model, true));
 
-            _Bot.Save("prompts.txt");  
+            this._Bot.Save("prompts.txt");  
 
             return results;
-        },
+        }
         
         async Prompt(prompt: string)
         {
-            return (await _Bot.Prompt(prompt).Run());
-        },
+            return (await this._Bot.Prompt(prompt).Run());
+        }
 
         async Initialize()
-        {  
-            _State = ResumeBotState.Setup;
+        {
+            await this.Bot.Initialize();  
+        }
 
-            return await _Bot.Setup([new Message("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
+        async PromptResume()
+        {  
+            this._State = ResumeBotState.Setup;
+
+            return await this._Bot.Setup([new Message("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
                                     new Message("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
-        },
-        
-        ResumeBuffer: resumeBuffer,
-    };
+        }
 } 

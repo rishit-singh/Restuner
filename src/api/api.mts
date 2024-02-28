@@ -1,5 +1,5 @@
 import express from "express";
-import { ResumeBot, createResumeBot } from "../modules/resumebot.mjs";
+import { ResumeBot } from "../modules/resumebot.mjs";
 import { readFileSync } from "fs";
 import cors from "cors";
 import multer from "multer";
@@ -24,14 +24,16 @@ let output: string = "";
 
 async function Main()
 {
-    LLM = await createResumeBot({
+    LLM = new ResumeBot({
         Owner: "mistralai",
         Name: "mixtral-8x7b-instruct-v0.1"
-    }, tokens => { output = LLM.Bot.Results[LLM.Bot.Results.length - 1].join(""); });  
+    }, process.env.REPLICATE_API_TOKEN as string, tokens => { output = LLM.Bot.Results[LLM.Bot.Results.length - 1].join(""); });  
+
+    await LLM.Initialize();
 
     app.post("/upload", upload.array("resume"), async (req, res) => {
         await LLM.LoadResume(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer);
-        await LLM.Initialize();
+        await LLM.PromptResume();
 
         console.log("Reached here");
 

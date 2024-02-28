@@ -125,7 +125,7 @@ export class ReplicateBot
         while (output == null) {
             let response = await ((await fetch(url, {
                 method: "GET",
-                headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` }
+                headers: { Authorization: `Token ${this.ApiKey}` }
             })).json()) as any;
 
             if (response.output !== undefined) {
