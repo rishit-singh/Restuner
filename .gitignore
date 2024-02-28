@@ -2,5 +2,6 @@
 **/.env**
 **/prompts.txt
 
+yarn.lock
 .vscode/
 bin/

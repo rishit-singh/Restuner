@@ -10,6 +10,7 @@ export enum ResumeBotState
 {
     Setup,
     Tuning,
+    Prompting,
     Idle
 }
 
@@ -26,18 +27,22 @@ export class ResumeBot
 
     private _Bot: ReplicateBot; // ReplicateBot instance
 
+    private PromptFile: string; // File path to save the prompt context to
+
     /**
      * Constructor   
      * @param model Model to set 
      * @param apiKey API key to set
      * @param onGenerateCallback Callback to set
      */
-    constructor(model: Model, apiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
+    constructor(model: Model, apiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { }, promptFile = "prompts.txt")
     {
         this._State = ResumeBotState.Idle;
         this._Model = model;
         
         this._ResumeBuffer = "";
+        
+        this.PromptFile = promptFile;
 
         this._Bot = new ReplicateBot(this._Model, apiKey, "RREND", onGenerateCallback); 
     }
@@ -109,7 +114,7 @@ export class ResumeBot
         {
             return this._ResumeBuffer;
         }
-       
+        
         /**
          * Runs the prompts to tune the resume
          * @param jobDescription Job description to tune for
@@ -119,22 +124,29 @@ export class ResumeBot
         {
             this._State = ResumeBotState.Tuning;  
 
-            const result = (await this._Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
-                            .Run((this as ResumeBot).Model, true));
+            const result = (await this._Bot.Prompt(`Tune and recreate this resume to make it more relevant to this job description: "${jobDescription}". Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`).Run(this.Model,true));
 
-            this._Bot.Save("prompts.txt");  
+            this._Bot.Save(this.PromptFile);  
+
+            this._State = ResumeBotState.Idle;
 
             return result.Results;
         }
 
         /**
-         * Prompts the given text  
-         * @param prompt 
-         * @returns 
+         * Prompts the given text to the bot
+         * @param message Prompt message
+         * @returns Prompt result
          */
-        async Prompt(prompt: string): Promise<string[][]>
+        async Prompt(message: string): Promise<string[][]>
         {
-            return (await this._Bot.Prompt(prompt).Run()).Results;
+            this._State = ResumeBotState.Prompting;  
+
+            const results = (await this._Bot.Prompt(message).Run()).Results;
+
+            this._State = ResumeBotState.Idle;
+
+            return results;
         }
 
         /**
@@ -142,6 +154,8 @@ export class ResumeBot
          */
         async Initialize()
         {
+            this._State = ResumeBotState.Setup;  
+
             await this.Bot.Initialize();  
         }
 
@@ -153,7 +167,11 @@ export class ResumeBot
         {  
             this._State = ResumeBotState.Setup;
 
-            return await this._Bot.Setup([new Message("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
-                                    new Message("user",  `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
+            const results = await this._Bot.Setup([new Message("system", "You are a resume analyzer. I will provide you a resume in form of text and then a job description. You must analyze and understand the context of the resume and later generate the requested information based on it."),
+                new Message("user", `Heres the resume \n${(this as ResumeBot).ResumeBuffer}. Dont generate any info yet, wait for the job description.`)], true);
+
+            this._State = ResumeBotState.Idle;
+
+            return results; 
         }
 } 
