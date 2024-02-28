@@ -32,6 +32,9 @@ export class Message
     }
 }
 
+/**
+ * Execution state of the bot 
+ */
 export enum BotState
 {
     Setup,

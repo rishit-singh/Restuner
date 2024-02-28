@@ -3,6 +3,9 @@ import { ReplicateBot, TokenCallback, Model, Message } from "./bot.mjs";
 import { UnsafeCast } from "../util.js";
 import { TextItem } from "pdfjs-dist/types/src/display/api.js";
 
+/**
+ * Execution state of the bot 
+ */
 export enum ResumeBotState
 {
     Setup,
@@ -10,16 +13,25 @@ export enum ResumeBotState
     Idle
 }
 
+/**
+ * Abstraction over ReplicateBot with routines that implement the resume tuning utility 
+ */
 export class ResumeBot
 {
-    _ResumeBuffer: string;
+    private _ResumeBuffer: string; // String extracted from the provided buffer
     
-    _State: ResumeBotState; 
+    private _State: ResumeBotState; // Bot state 
 
-    _Model: Model;
+    private _Model: Model; // Model to use
 
-    _Bot: ReplicateBot;
+    private _Bot: ReplicateBot; // ReplicateBot instance
 
+    /**
+     * Constructor   
+     * @param model Model to set 
+     * @param apiKey API key to set
+     * @param onGenerateCallback Callback to set
+     */
     constructor(model: Model, apiKey: string, onGenerateCallback: TokenCallback = (tokens: string[]) => { })
     {
         this._State = ResumeBotState.Idle;
@@ -30,6 +42,10 @@ export class ResumeBot
         this._Bot = new ReplicateBot(this._Model, apiKey, "RREND", onGenerateCallback); 
     }
 
+    /**
+     * Loads the resume from a PDF buffer into a string
+     * @param buffer PDF buffer to load from 
+     */
     async LoadResume(buffer: ArrayBuffer) {
         let resumeBuffer: string = "";
 
@@ -54,53 +70,85 @@ export class ResumeBot
             this._ResumeBuffer = resumeBuffer;
         }
 
+        /**
+         * Model setter
+         */
         set Model(model)
         {
             this._Model = model;
         }
  
+        /**
+         * Model getter 
+         */
         get Model(): Model
         {
             return this._Model;
         }
 
+        /**
+         * State getter 
+         */
         get State(): ResumeBotState
         {
             return this._State;
         }
         
+        /**
+         * Bot getter 
+         */
         get Bot(): ReplicateBot
         {
             return this._Bot;
         }
         
+        /**
+         * ResumeBuffer getter 
+         */
         get ResumeBuffer()
         {
             return this._ResumeBuffer;
         }
-        
-        async Tune(jobDescription: string)
+       
+        /**
+         * Runs the prompts to tune the resume
+         * @param jobDescription Job description to tune for
+         * @returns Prompt results
+         */
+        async Tune(jobDescription: string): Promise<string[][]>
         {
-            this._State = ResumeBotState.Tuning;
+            this._State = ResumeBotState.Tuning;  
 
-            const results = (await this._Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
+            const result = (await this._Bot.Prompt(`Tune and recreate this resume to match this ${jobDescription}. Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`)
                             .Run((this as ResumeBot).Model, true));
 
             this._Bot.Save("prompts.txt");  
 
-            return results;
-        }
-        
-        async Prompt(prompt: string)
-        {
-            return (await this._Bot.Prompt(prompt).Run());
+            return result.Results;
         }
 
+        /**
+         * Prompts the given text  
+         * @param prompt 
+         * @returns 
+         */
+        async Prompt(prompt: string): Promise<string[][]>
+        {
+            return (await this._Bot.Prompt(prompt).Run()).Results;
+        }
+
+        /**
+         * Initializes the bot
+         */
         async Initialize()
         {
             await this.Bot.Initialize();  
         }
 
+        /**
+         * Prompts the loaded resume to the bot 
+         * @returns 
+         */
         async PromptResume()
         {  
             this._State = ResumeBotState.Setup;
