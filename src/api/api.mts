@@ -37,32 +37,44 @@ async function Main()
     await LLM.Initialize();
 
     app.post("/upload", upload.array("resume"), async (req, res) => {
-
         let Session = new ResumeBotSession(((UnsafeCast<File[]>(req.files))[0]).buffer.buffer, 
                                             req.body.job_description, 
                                             model, process.env.REPLICATE_API_TOKEN as string);
 
+
         Sessions.set(Session.ID, Session);
+
+        console.log(Sessions.get(Session.ID));
 
         await Sessions.get(Session.ID)?.Initialize();
         await Sessions.get(Session.ID)?.Run();
 
         console.log("Reached here");
 
-        await LLM.Tune(req.body.job_description);
-
         res.send({State: LLM.State, SessionID: Session.ID});
     });
 
-    app.post("/prompt", async (req, res) => {
+    app.post("/prompt", async (req, res) => {   
     });
 
     app.get("/output/:sessionId", (req, res) => {
-        const results: string[][] = Sessions.get(req.params.sessionId)?.Results as string[][]; 
-        
-        const result: string[] = results[results.length - 1]; 
+        const session: ResumeBotSession | undefined = Sessions.get(req.params.sessionId);
 
-        res.send({ State: LLM.State, Output: (result !== undefined) ? result.join("") : ""});
+        if (session === undefined)
+        {
+            res.send({});
+
+            return;
+        } 
+
+        const results: string[][] = session.Results as string[][]; 
+
+        let result: string[] | undefined = undefined;
+        
+        if (results !== undefined)
+            result = results[results.length - 1] as string[]; 
+
+        res.send({ State: session.State, Output: (result !== undefined) ? (result as string[]).join("") : ""});
     });
 
     app.listen(port, () => {
