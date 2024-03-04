@@ -41,20 +41,18 @@ async function Main()
                                             req.body.job_description, 
                                             model, process.env.REPLICATE_API_TOKEN as string);
 
-
         Sessions.set(Session.ID, Session);
 
         console.log(Sessions.get(Session.ID));
 
-        await Sessions.get(Session.ID)?.Initialize();
-        await Sessions.get(Session.ID)?.Run();
-
+        Sessions.get(Session.ID)?.Initialize().then(async () => await Sessions.get(Session.ID)?.Run() );
+        
         console.log("Reached here");
 
         res.send({State: LLM.State, SessionID: Session.ID});
     });
 
-    app.post("/prompt", async (req, res) => {   
+    app.post("/prompt", async (req, res) => {  
     });
 
     app.get("/output/:sessionId", (req, res) => {
