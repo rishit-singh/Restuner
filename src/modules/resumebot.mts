@@ -124,7 +124,7 @@ export class ResumeBot
         {
             this._State = ResumeBotState.Tuning;  
 
-            const result = (await this._Bot.Prompt(`Tune and recreate this resume to make it more relevant to this job description: "${jobDescription}". Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown.`).Run(this.Model,true));
+            const result = (await this._Bot.Prompt(`Tune and recreate this resume to make it more relevant to this job description: "${jobDescription}". Make sure to include every relevant info from the original resume. Generate the resume in fancy markdown, but with no emojis.`).Run(this.Model,true));
 
             this._Bot.Save(this.PromptFile);  
 

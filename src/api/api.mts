@@ -1,21 +1,25 @@
 import express from "express";
+import bodyParser from "body-parser";
 import { ResumeBot } from "../modules/resumebot.mjs";
 import { readFileSync } from "fs";
 import cors from "cors";
 import multer from "multer";
 import { UnsafeCast } from "../util.js";
-import { Model, ReplicateBot } from "../modules/bot.mjs"; 
+import { Message, Model, ReplicateBot } from "../modules/bot.mjs"; 
 import { ResumeBotSession } from "../modules/botsession.mjs";
 
 const app = express();
 const upload = multer();
-
 const port = 8001;
 
 let Output: string[] = []; 
 
 app.use(cors());
 app.use(express.json());
+
+app.use(bodyParser.json({ type: "application/*+json" }))
+app.use(bodyParser.raw({ type: "application/vnd.custom-type" }))
+app.use(bodyParser.text({ type: "text/html" }))
 
 type File = Express.Multer.File; 
 
@@ -42,19 +46,50 @@ async function Main()
                                             model, process.env.REPLICATE_API_TOKEN as string);
 
         Sessions.set(Session.ID, Session);
-
-        console.log(Sessions.get(Session.ID));
-
-        Sessions.get(Session.ID)?.Initialize().then(async () => await Sessions.get(Session.ID)?.Run() );
         
+        Session = Sessions.get(Session.ID) as ResumeBotSession;
+        
+        Session.Initialize().then(async () => Session.Run());
+
         console.log("Reached here");
 
-        res.send({State: LLM.State, SessionID: Session.ID});
+        res.send({State: Session.State, SessionID: Session.ID});
     });
 
     app.post("/prompt", async (req, res) => {  
-    });
+        console.log(req.body);
 
+        if (req.body.SessionID === undefined)
+        {
+            res.status(400);
+            res.send({
+                "error": "Missing required field SessionID."
+            });
+
+            return;
+        }
+       
+        if (req.body.Prompts === undefined)
+        {
+            res.status(400);
+            res.send({
+                "error": "Missing required field Prompts."
+            });
+
+            return;
+        }
+
+        const sessionId = req.body.SessionID;
+
+        (req.body.Prompts as string[]).forEach( prompt => Sessions.get(sessionId)?.Prompt(prompt));
+
+        const Session = Sessions.get(sessionId) as ResumeBotSession;
+        
+        await Session.Run();
+
+        res.send({ State: Session.State, SessionID: Session.ID });
+    });
+ 
     app.get("/output/:sessionId", (req, res) => {
         const session: ResumeBotSession | undefined = Sessions.get(req.params.sessionId);
 
