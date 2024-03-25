@@ -17,9 +17,9 @@ let Output: string[] = [];
 app.use(cors());
 app.use(express.json());
 
-app.use(bodyParser.json({ type: "application/*+json" }))
-app.use(bodyParser.raw({ type: "application/vnd.custom-type" }))
-app.use(bodyParser.text({ type: "text/html" }))
+app.use(bodyParser.json({ type: "application/*+json" })); 
+app.use(bodyParser.raw({ type: "application/vnd.custom-type" }));
+app.use(bodyParser.text({ type: "text/html" }));
 
 type File = Express.Multer.File; 
 

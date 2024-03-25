@@ -5,3 +5,10 @@
 yarn.lock
 .vscode/
 bin/
+
+llm/*.json
+llm/*.pdf
+
+**/__pycache__/
+
+llm/restuner/
