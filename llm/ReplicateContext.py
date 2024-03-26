@@ -28,7 +28,7 @@ class ReplicateContext(LLMContext[ReplicateMessage]):
 
     def LoadMessages(self, promptFile: str = "prompts.json") -> None:
         self.PromptFile = promptFile
-
+ 
         with open(promptFile, "r") as fp:
             self.Messages = json.load(fp)
 

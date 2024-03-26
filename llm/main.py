@@ -4,6 +4,7 @@ from tinytune.pipeline import Pipeline
 from gptcontext import GPTContext, GPTMessage
 
 import os
+import json
 import PyPDF2
 
 contexts = {
@@ -29,6 +30,7 @@ def Callback(content):
         print()
 
 contexts["gpt"].OnGenerateCallback = Callback
+contexts["replicate"].OnGenerateCallback = Callback
 
 @prompt_job("setup")
 def Setup(id: str,  context: GPTContext, prevResult: Any):  
@@ -63,7 +65,74 @@ The Senior Power Platform Developer will be responsible to provide solution desi
         .Run(stream=True)
         .Save("initial_prompts_tune.json"))
 
-Tuner: Pipeline = Pipeline(contexts["gpt"]) 
+with open("initial_prompts_tune.json") as fp:
+    for message in json.load(fp):
+        contexts["replicate"].Messages.append(str(ReplicateMessage(message["role"], message["content"])))
 
-(Tuner.AddJob(Setup)
+@prompt_job("followup", contexts["replicate"])
+def FollowUp(id: str, llm: ReplicateContext, prevResult: Any):
+    llm.Prompt("""
+        Here's another job description, 
+            
+Develop, test, and maintain high-quality software products
+Collaborate with cross-functional teams to design and implement software features
+Write clean, efficient, and well-documented code
+Troubleshoot and debug software issues
+Stay up-to-date with emerging trends and technologies in software development
+Required Skills:
+
+Minimum 3 years of experience in software development
+Proficiency with TypeScript (or similar languages)
+Full-stack development experience (frontend and server-side)
+Experience working with databases and APIs
+Strong problem-solving skills
+Excellent communication skills
+Ability to work independently and as part of a team
+Desired Skills:
+
+Strong knowledge of TypeScript
+Familiarity with OpenAI APIs
+Experience with Hasura, Pinecone DB, Postgres, Vue JS
+Experience with cloud technologies such as Google Cloud or AWS
+Experience with Kubernetes
+Our Tech Stack:
+
+TypeScript
+Vue JS
+Node JS
+Google Cloud (Pub/Sub, Postgres, Kubernetes, Scheduler, Redis)
+Docker / Docker Compose
+API integrations (Salesforce, Slack, Outreach, Zendesk, Zoom, Gong, Asana, etc.)
+OpenAI (GPT-4 and Embeddings)
+Auth0
+Hasura
+GraphQL
+If you meet these requirements and are excited about the opportunity to join a dynamic and growing team building the next generation of Sales tools, then we encourage you to apply for this position.       
+        ,give me the analysis
+    """).Run(stream=True)
+    return llm.Messages[-1].Content[:llm.Messages[-1].Content.find("{}")]
+
+@prompt_job("validate", contexts["gpt"])
+def Validate(id: str, llm: GPTContext, prevResult: str):
+    try:
+        loaded = json.loads(prevResult)
+    except json.JSONDecodeError:
+        llm.Prompt(GPTMessage("user", f"fix this JSON, and only respond with the fixed json, no formatting, explanation, or backticks: {prevResult}")).Run(stream=True)
+
+    if (len(llm.Messages) > 0):
+        return llm.Messages[-1]
+
+    return ""
+
+pipeline = Pipeline(contexts["replicate"])
+  
+(pipeline.AddJob(FollowUp)
+    .AddJob(Validate)
     .Run())
+
+with open("pipeline.json", 'w') as fp:
+    if (pipeline.Results["validate"] == None):
+        fp.write(pipeline.Results["followup"][-1])
+    else:
+        fp.write(pipeline.Results["validate"][-1].Content)
+
