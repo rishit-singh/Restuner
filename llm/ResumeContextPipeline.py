@@ -14,7 +14,7 @@ class ResumeContextPipeline:
     
     def Save(self, file: str):
         self.LLM.Save(file)
-
+    
     def Build(self, resume: str):
         @prompt_job("setup", self.LLM)
         def Setup(id: str, context: LLMContext, prevResult: Any):
@@ -26,7 +26,6 @@ class ResumeContextPipeline:
         Setup()
 
         return self
-
 
 def ExtractPDFBuffer(path) -> str:
     bufferStr: str = ""
@@ -51,9 +50,5 @@ llm.OnGenerateCallback = Callback
 pipeline: ResumeContextPipeline = ResumeContextPipeline(llm)
 
 pipeline.Build(ExtractPDFBuffer("resume.pdf")).Save("resume_context.json")
-
-
-
-
 
 
