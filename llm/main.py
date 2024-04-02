@@ -1,15 +1,18 @@
 from ReplicateContext import ReplicateMessage, ReplicateContext, Model, Any
 from tinytune.prompt import PromptJob, prompt_job
 from tinytune.pipeline import Pipeline
+from parallelrunner import ParallelRunner
 from gptcontext import GPTContext, GPTMessage
 
 import os
 import json
 import PyPDF2
+import asyncio
 
 contexts = {
     "gpt": GPTContext("gpt-4-0125-preview", os.getenv("OPENAI_KEY")), 
-    "replicate": ReplicateContext(Model("mistralai", "mixtral-8x7b-instruct-v0.1"), os.getenv("REPLICATE_API_TOKEN")) 
+    "replicate": ReplicateContext(Model("mistralai", "mixtral-8x7b-instruct-v0.1"), os.getenv("REPLICATE_API_TOKEN")), 
+    "replicate1": ReplicateContext(Model("mistralai", "mixtral-8x7b-instruct-v0.1"), os.getenv("REPLICATE_API_TOKEN")) 
 }
 
 def ExtractPDFBuffer(path) -> str:
@@ -32,7 +35,7 @@ def Callback(content):
 contexts["gpt"].OnGenerateCallback = Callback
 contexts["replicate"].OnGenerateCallback = Callback
 
-@prompt_job("setup")
+@prompt_job("setup", context=contexts["gpt"])
 def Setup(id: str,  context: GPTContext, prevResult: Any):  
     pdf: str = ExtractPDFBuffer("resume.pdf")
 
@@ -65,9 +68,9 @@ The Senior Power Platform Developer will be responsible to provide solution desi
         .Run(stream=True)
         .Save("initial_prompts_tune.json"))
 
-with open("initial_prompts_tune.json") as fp:
-    for message in json.load(fp):
-        contexts["replicate"].Messages.append(str(ReplicateMessage(message["role"], message["content"])))
+# with open("initial_prompts_tune.json") as fp:
+#     for message in json.load(fp):
+#         contexts["replicate"].Messages.append(str(ReplicateMessage(message["role"], message["content"])))
 
 @prompt_job("followup", contexts["replicate"])
 def FollowUp(id: str, llm: ReplicateContext, prevResult: Any):
@@ -126,13 +129,36 @@ def Validate(id: str, llm: GPTContext, prevResult: str):
 
 pipeline = Pipeline(contexts["replicate"])
   
-(pipeline.AddJob(FollowUp)
-    .AddJob(Validate)
-    .Run())
+# (pipeline.AddJob(FollowUp)
+#     .AddJob(Validate)
+#     .Run())
 
-with open("pipeline.json", 'w') as fp:
-    if (pipeline.Results["validate"] == None):
-        fp.write(pipeline.Results["followup"][-1])
-    else:
-        fp.write(pipeline.Results["validate"][-1].Content)
+# with open("pipeline.json", 'w') as fp:
+#     if (pipeline.Results["validate"] == None):
+#         fp.write(pipeline.Results["followup"][-1])
+#     else:
+#         fp.write(pipeline.Results["validate"][-1].Content)
 
+@prompt_job(id="random", context=contexts["replicate1"])
+def TestPrompt(id: str, llm: ReplicateContext, prevResult: Any):
+    llm.OnGenerateCallback = Callback
+    llm.Prompt("write me a lexer in C++").Run(stream = True)
+    return llm.Messages[-1] 
+
+# runner = ParallelRunner(llm=contexts["replicate"])
+
+# (runner.AddJob(Setup)
+#         .AddJob(TestPrompt)
+#         .Run(onWait = lambda job : print("Future: ", job.Futures)))
+
+
+async def Main():
+    asyncio.gather(asyncio.create_task(Setup()), asyncio.create_task(TestPrompt()))
+
+# print(runner.Results)
+        
+asyncio.run(Main())
+
+
+
+ 

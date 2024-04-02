@@ -1,6 +1,7 @@
 from typing import Callable, Any
 from concurrent.futures import ThreadPoolExecutor, Future, as_completed
 from tinytune.llmcontext import LLMContext
+from tinytune.prompt import PromptJob
 
 class ParallelRunner:
     """
@@ -13,7 +14,7 @@ class ParallelRunner:
         Parameters:
         - llm (LLMContext): The LLM context.
         """
-        self.Jobs: list[Callable[[LLMContext, list[Any]], Any]] = []
+        self.Jobs: list[PromptJob] = []
         self.Futures: list[Future]
         self.Pool: ThreadPoolExecutor = None
         self.LLM: LLMContext = llm
@@ -46,7 +47,7 @@ class ParallelRunner:
         """
         return
 
-    def AddJob(self, job: Callable[[Any], Any]) -> Any:
+    def AddJob(self, job: PromptJob) -> Any:
         """
         Add a job to the runner.
 
@@ -57,6 +58,7 @@ class ParallelRunner:
         - ParallelRunner: The ParallelRunner object.
         """
         self.Jobs.append(job)
+
         return self 
 
     def Run(self, onWait: Callable[[Any], Any] = None) -> bool:
@@ -72,10 +74,10 @@ class ParallelRunner:
         """
         try:
             self.Pool = ThreadPoolExecutor(max_workers=len(self.Jobs))
-            self.Futures = [self.Pool.submit(job, self.LLM) for job in self.Jobs]
+            self.Futures = [self.Pool.submit(job, job.ID, job.LLM, job.PrevResult) for job in self.Jobs]
 
             for future in self.GetCompleted(onWait):
-                self.Results.append()
+                self.Results.append(future.result())
 
             self.OnComplete()
  
